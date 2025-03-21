@@ -4,11 +4,12 @@ mod stores;
 use anyhow::Result;
 use interfaces::http::HttpInterface;
 use stores::hashmap::HashmapStore;
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // initialize tracing
     tracing_subscriber::fmt::init();
+    info!("Starting example service...");
 
     let hashmap_store = HashmapStore::new()?;
 

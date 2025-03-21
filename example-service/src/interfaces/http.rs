@@ -10,6 +10,8 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::task::JoinHandle;
+use tower_http::trace::TraceLayer;
+use tracing::debug;
 
 use crate::stores::hashmap::{HashmapStore, HashmapStoreError};
 
@@ -30,8 +32,11 @@ impl HttpInterface {
         &self,
         hashmap_store: HashmapStore,
     ) -> JoinHandle<Result<(), HttpInterfaceError>> {
+        debug!("Starting HTTP interface on port 3000...");
+
         let app = self.create_app(hashmap_store);
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+
         tokio::spawn(async move {
             axum::serve(listener, app)
                 .await
@@ -46,7 +51,8 @@ impl HttpInterface {
             .with_state(Arc::new(HttpInterfaceAppState {
                 hashmap_store: hashmap_store,
             }))
-            .route("/health", get(|| async { "Ok" }));
+            .route("/health", get(|| async { "Ok" }))
+            .layer(TraceLayer::new_for_http());
     }
 }
 
