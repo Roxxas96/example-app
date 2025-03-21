@@ -1,0 +1,16 @@
+[package]
+name = "example-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.8.1" }
+serde = { version = "1.0.219", features = ["derive"]}
+tokio = { version = "1.44.1", features = ["macros", "rt-multi-thread"]}
+tracing = { version = "0.1.41" }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+thiserror = { version = "2.0.12" }
+anyhow = { version = "1.0.97" }
+rand = { version = "0.9.0" }
+log = { version = "0.4.26" }
+env_logger = { version = "0.11.7" }
