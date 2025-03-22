@@ -58,11 +58,13 @@ impl HttpInterface {
         }
     }
 
-    pub async fn start_app(&self) -> JoinHandle<Result<(), HttpInterfaceError>> {
-        debug!("Starting HTTP interface on port 3000...");
+    pub async fn start_app(&self, port: u16) -> JoinHandle<Result<(), HttpInterfaceError>> {
+        debug!("Starting HTTP interface on port {:?}...", port);
 
         let app = self.create_app();
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{0}", port))
+            .await
+            .unwrap();
 
         tokio::spawn(async move {
             axum::serve(listener, app)

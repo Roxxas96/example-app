@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error};
+use std::collections::HashMap;
 
 use anyhow::Result;
 use rand::Rng;
@@ -89,6 +89,11 @@ impl HashmapStore {
         let mut rng = rand::rng();
         let index = rng.random_range(0..self.word_store.len());
 
-        Ok(self.word_store.keys().nth(index).ok_or(HashmapStoreError::WrongIndexGeneration)?.to_string())
+        Ok(self
+            .word_store
+            .keys()
+            .nth(index)
+            .ok_or(HashmapStoreError::WrongIndexGeneration)?
+            .to_string())
     }
 }
