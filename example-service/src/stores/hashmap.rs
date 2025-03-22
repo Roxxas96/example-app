@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, error};
 
 use anyhow::Result;
+use rand::Rng;
 use thiserror::Error;
 use tracing::{debug, trace};
 
@@ -12,6 +13,10 @@ pub enum HashmapStoreError {
     NotFound(String),
     #[error("Word {0} already exists")]
     AlreadyExists(String),
+    #[error("Store is empty")]
+    Empty,
+    #[error("Wrong index generation during random picking")]
+    WrongIndexGeneration,
 }
 
 pub struct HashmapStore {
@@ -72,5 +77,18 @@ impl HashmapStore {
         self.word_store.remove(&word);
 
         Ok(())
+    }
+
+    pub async fn random_word(&mut self) -> Result<String, HashmapStoreError> {
+        trace!("Getting a random word from hashmap store...");
+
+        if self.word_store.is_empty() {
+            return Err(HashmapStoreError::Empty);
+        }
+
+        let mut rng = rand::rng();
+        let index = rng.random_range(0..self.word_store.len());
+
+        Ok(self.word_store.keys().nth(index).ok_or(HashmapStoreError::WrongIndexGeneration)?.to_string())
     }
 }

@@ -75,6 +75,7 @@ impl HttpInterface {
         return Router::new()
             .route("/word", post(add_word).delete(remove_word))
             .route("/word/{word}", get(get_word))
+            .route("/word/random", post(random_word))
             .with_state(self.store.clone())
             .route("/health", get(|| async { "Ok" }))
             .layer(TraceLayer::new_for_http());
@@ -144,4 +145,26 @@ async fn remove_word(
             _ => HttpInterfaceError::InternalServerError.into(),
         })
         .map(|_| StatusCode::OK)
+}
+
+#[derive(Serialize)]
+struct RandomWordResponse {
+    pub word: String,
+}
+
+async fn random_word(
+    State(state): State<Arc<Mutex<HashmapStore>>>,
+) -> Result<(StatusCode, Json<RandomWordResponse>), (StatusCode, String)> {
+    state
+        .lock()
+        .await
+        .random_word()
+        .await
+        .map_err(|err| match err {
+            HashmapStoreError::Empty => {
+                HttpInterfaceError::BadRequest("Store is empty".to_string()).into()
+            }
+            _ => HttpInterfaceError::InternalServerError.into(),
+        })
+        .map(|word| (StatusCode::OK, Json(RandomWordResponse { word })))
 }
