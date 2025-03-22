@@ -13,11 +13,9 @@ async fn main() -> Result<()> {
 
     let hashmap_store = HashmapStore::new()?;
 
-    let http_interface = HttpInterface {};
+    let http_interface = HttpInterface::new(hashmap_store);
 
-    tokio::join!(http_interface.start_app(hashmap_store))
-        .0
-        .await??;
+    tokio::join!(http_interface.start_app()).0.await??;
 
     Ok(())
 }

@@ -1,8 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use anyhow::Result;
 use thiserror::Error;
-use tokio::sync::Mutex;
 use tracing::{debug, trace};
 
 #[derive(Error, Debug)]
@@ -16,7 +15,7 @@ pub enum HashmapStoreError {
 }
 
 pub struct HashmapStore {
-    pub word_store: Arc<Mutex<HashMap<String, String>>>,
+    pub word_store: HashMap<String, String>,
 }
 
 impl HashmapStore {
@@ -37,45 +36,40 @@ impl HashmapStore {
         }
 
         Ok(HashmapStore {
-            word_store: Arc::new(Mutex::new(initial_store)),
+            word_store: initial_store,
         })
     }
 
     pub async fn get_word(&self, word: String) -> Result<String, HashmapStoreError> {
         trace!("Getting word {:?} from hashmap store...", word);
 
-        let store = self.word_store.lock().await;
-
-        Ok(store
+        Ok(self
+            .word_store
             .get(&word)
             .ok_or(HashmapStoreError::NotFound(word))?
             .to_string())
     }
 
-    pub async fn add_word(&self, word: String) -> Result<(), HashmapStoreError> {
+    pub async fn add_word(&mut self, word: String) -> Result<(), HashmapStoreError> {
         trace!("Adding word {:?} to hashmap store...", word);
 
-        let mut store = self.word_store.lock().await;
-
-        if store.get(&word).is_some() {
+        if self.word_store.get(&word).is_some() {
             return Err(HashmapStoreError::AlreadyExists(word));
         }
 
-        store.insert(word.clone(), word);
+        self.word_store.insert(word.clone(), word);
 
         Ok(())
     }
 
-    pub async fn remove_word(&self, word: String) -> Result<(), HashmapStoreError> {
+    pub async fn remove_word(&mut self, word: String) -> Result<(), HashmapStoreError> {
         trace!("Removing word {:?} from hashmap store...", word);
 
-        let mut store = self.word_store.lock().await;
-
-        if store.get(&word).is_none() {
+        if self.word_store.get(&word).is_none() {
             return Err(HashmapStoreError::NotFound(word));
         }
 
-        store.remove(&word);
+        self.word_store.remove(&word);
 
         Ok(())
     }
