@@ -47,18 +47,15 @@ impl Into<(StatusCode, String)> for HttpInterfaceError {
     }
 }
 
-struct HttpInterfaceAppState {
-    pub hashmap_store: HashmapStore,
-}
-
 pub struct HttpInterface {
-    state: Arc<Mutex<HttpInterfaceAppState>>,
+    store: Arc<Mutex<HashmapStore>>,
 }
 
 impl HttpInterface {
-    pub fn new(hashmap_store: HashmapStore) -> Self {
-        let state = Arc::new(Mutex::new(HttpInterfaceAppState { hashmap_store }));
-        HttpInterface { state }
+    pub fn new(hashmap_store: Arc<Mutex<HashmapStore>>) -> Self {
+        HttpInterface {
+            store: hashmap_store,
+        }
     }
 
     pub async fn start_app(&self) -> JoinHandle<Result<(), HttpInterfaceError>> {
@@ -78,7 +75,7 @@ impl HttpInterface {
         return Router::new()
             .route("/word", post(add_word).delete(remove_word))
             .route("/word/{word}", get(get_word))
-            .with_state(self.state.clone())
+            .with_state(self.store.clone())
             .route("/health", get(|| async { "Ok" }))
             .layer(TraceLayer::new_for_http());
     }
@@ -90,13 +87,12 @@ struct AddWordRequest {
 }
 
 async fn add_word(
-    State(state): State<Arc<Mutex<HttpInterfaceAppState>>>,
+    State(state): State<Arc<Mutex<HashmapStore>>>,
     Json(payload): Json<AddWordRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     state
         .lock()
         .await
-        .hashmap_store
         .add_word(payload.word.clone())
         .await
         .map_err(|err| match err {
@@ -112,13 +108,12 @@ struct GetWordResponse {
 }
 
 async fn get_word(
-    State(state): State<Arc<Mutex<HttpInterfaceAppState>>>,
+    State(state): State<Arc<Mutex<HashmapStore>>>,
     Path(word): Path<String>,
 ) -> Result<(StatusCode, Json<GetWordResponse>), (StatusCode, String)> {
     state
         .lock()
         .await
-        .hashmap_store
         .get_word(word.clone())
         .await
         .map_err(|err| match err {
@@ -134,13 +129,12 @@ struct RemoveWordRequest {
 }
 
 async fn remove_word(
-    State(state): State<Arc<Mutex<HttpInterfaceAppState>>>,
+    State(state): State<Arc<Mutex<HashmapStore>>>,
     Json(payload): Json<RemoveWordRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     state
         .lock()
         .await
-        .hashmap_store
         .remove_word(payload.word.clone())
         .await
         .map_err(|err| match err {
