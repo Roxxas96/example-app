@@ -6,8 +6,6 @@ use tracing::trace;
 
 #[derive(Error, Debug)]
 pub enum HashmapStoreError {
-    #[error("Random decided to crash")]
-    Random,
     #[error("Word {0} not found")]
     NotFound(String),
     #[error("Word {0} already exists")]
@@ -32,10 +30,6 @@ impl HashmapStore {
         initial_store.insert("are".to_string(), "are".to_string());
         initial_store.insert("you".to_string(), "you".to_string());
         initial_store.insert("?".to_string(), "?".to_string());
-
-        if rand::random() {
-            return Err(HashmapStoreError::Random);
-        }
 
         Ok(HashmapStore {
             word_store: initial_store,
