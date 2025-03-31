@@ -38,13 +38,13 @@ impl Into<tonic::Status> for GrpcInterfaceError {
 
 pub struct GrpcInterface {
     store: Arc<Mutex<HashmapStore>>,
-    clients: Vec<Arc<Mutex<GrpcClient>>>,
+    clients: Arc<Mutex<Vec<GrpcClient>>>,
 }
 
 impl GrpcInterface {
     pub fn new(
         hashmap_store: Arc<Mutex<HashmapStore>>,
-        grpc_client: Vec<Arc<Mutex<GrpcClient>>>,
+        grpc_client: Arc<Mutex<Vec<GrpcClient>>>,
     ) -> Self {
         GrpcInterface {
             store: hashmap_store,
@@ -78,16 +78,22 @@ impl WordService for GrpcInterface {
         let mut new_chain = message.input.clone();
         new_chain.push(random_word);
 
-        if message.count > 0 && self.clients.len() > 0 {
-            new_chain = self
-                .clients
-                .get(random_range(0..self.clients.len()))
-                .ok_or_else(|| -> tonic::Status { GrpcInterfaceError::InternalServerError.into() })?
-                .lock()
-                .await
-                .chain(new_chain, message.count - 1)
-                .await
-                .map_err(|_| -> tonic::Status { GrpcInterfaceError::InternalServerError.into() })?;
+        if message.count > 0 {
+            let mut clients = self.clients.lock().await;
+            if !clients.is_empty() {
+                let random_client = random_range(0..clients.len());
+
+                new_chain = clients
+                    .get_mut(random_client)
+                    .ok_or_else(|| -> tonic::Status {
+                        GrpcInterfaceError::InternalServerError.into()
+                    })?
+                    .chain(new_chain, message.count - 1)
+                    .await
+                    .map_err(|_| -> tonic::Status {
+                        GrpcInterfaceError::InternalServerError.into()
+                    })?;
+            }
         }
 
         Ok(Response::new(ChainResponse { output: new_chain }))

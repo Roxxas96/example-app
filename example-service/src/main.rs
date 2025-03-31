@@ -2,7 +2,7 @@ mod clients;
 mod interfaces;
 mod stores;
 
-use std::{error, net::AddrParseError, sync::Arc};
+use std::{net::AddrParseError, sync::Arc};
 
 use anyhow::Result;
 use clients::grpc::{GrpcClient, GrpcClientError};
@@ -14,7 +14,10 @@ use interfaces::{
 use serde::{Deserialize, Serialize};
 use stores::hashmap::{HashmapStore, HashmapStoreError};
 use thiserror::Error;
-use tokio::{sync::Mutex, task::JoinError};
+use tokio::{
+    sync::Mutex,
+    task::{JoinError, JoinHandle},
+};
 use tonic::transport::Server;
 use tracing::{debug, info};
 
@@ -69,19 +72,26 @@ async fn main() -> Result<()> {
     let http_interface = HttpInterface::new(hashmap_store.clone());
     let http_server = http_interface.start_app(config.http_port).await;
 
-    let mut grpc_clients = vec![];
-    for service_url in config.connected_services {
-        grpc_clients.push(Arc::new(Mutex::new(
-            GrpcClient::new(service_url)
-                .await
-                .map_err(ExampleAppError::GrpcClientError)?,
-        )))
-    }
-
-    let grpc_interface = GrpcInterface::new(hashmap_store.clone(), grpc_clients);
+    let grpc_clients = Arc::new(Mutex::new(Vec::new()));
     let grpc_url = format!("0.0.0.0:{0}", config.grpc_port)
         .parse()
         .map_err(ExampleAppError::UrlParseError)?;
+
+    // Start a task for connecting the gRPC clients asynchronously
+    let client_connect_task: JoinHandle<Result<(), GrpcClientError>> = tokio::spawn({
+        let grpc_clients = grpc_clients.clone();
+        async move {
+            let mut clients = Vec::new();
+            for service_url in config.connected_services {
+                clients.push(GrpcClient::new(service_url).await?)
+            }
+            *grpc_clients.lock().await = clients;
+            Ok(())
+        }
+    });
+
+    // Now, we can start the gRPC server, even before the clients are connected
+    let grpc_interface = GrpcInterface::new(hashmap_store.clone(), grpc_clients.clone());
     let grpc_server = tokio::spawn(async move {
         debug!("Starting gRPC interface on port {0}...", config.grpc_port);
         Server::builder()
@@ -91,7 +101,7 @@ async fn main() -> Result<()> {
             .map_err(GrpcInterfaceError::GrpcServerError)
     });
 
-    let join_handle = tokio::join!(http_server, grpc_server);
+    let join_handle = tokio::join!(http_server, grpc_server, client_connect_task);
 
     join_handle
         .0
@@ -101,6 +111,10 @@ async fn main() -> Result<()> {
         .1
         .map_err(ExampleAppError::JoinHandleError)?
         .map_err(ExampleAppError::GrpcServerStartError)?;
+    join_handle
+        .2
+        .map_err(ExampleAppError::JoinHandleError)?
+        .map_err(ExampleAppError::GrpcClientError)?;
 
     Ok(())
 }
