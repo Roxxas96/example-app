@@ -19,6 +19,8 @@ use crate::stores::hashmap::{HashmapStore, HashmapStoreError};
 pub enum HttpInterfaceError {
     #[error("Axum serve error: {0}")]
     AxumServe(std::io::Error),
+    #[error("Error creating the TCP listener: {0}")]
+    TcpListenerCreation(std::io::Error),
     #[error("Word {0} not found")]
     NotFound(String),
     #[error("Word {0} already exists")]
@@ -32,7 +34,6 @@ pub enum HttpInterfaceError {
 impl Into<(StatusCode, String)> for HttpInterfaceError {
     fn into(self) -> (StatusCode, String) {
         match self {
-            Self::AxumServe(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
             Self::NotFound(word) => (StatusCode::NOT_FOUND, format!("Word '{}' not found", word)),
             Self::Conflict(word) => (
                 StatusCode::CONFLICT,
@@ -43,6 +44,10 @@ impl Into<(StatusCode, String)> for HttpInterfaceError {
                 "Internal server error".to_string(),
             ),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            _ => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Unknown error".to_string(),
+            ),
         }
     }
 }
@@ -62,11 +67,12 @@ impl HttpInterface {
         debug!("Starting HTTP interface on port {:?}...", port);
 
         let app = self.create_app();
-        let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{0}", port))
-            .await
-            .unwrap();
 
         tokio::spawn(async move {
+            let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{0}", port))
+                .await
+                .map_err(HttpInterfaceError::TcpListenerCreation)?;
+
             axum::serve(listener, app)
                 .await
                 .map_err(HttpInterfaceError::AxumServe)
