@@ -1,0 +1,55 @@
+services:
+  service-1:
+    build:
+      context: .
+      target: final
+    image: ${REPOSITORY:-}example-service:${VERSION:-latest}
+    ports:
+      - 3000:3000
+      - 50051:50051
+    environment:
+      - CONNECTED_SERVICES=http://service-2:50051,http://service-3:50051
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+    healthcheck:
+      test: curl --fail http://localhost:3000/health
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
+  service-2:
+    build:
+      context: .
+      target: final
+    image: ${REPOSITORY:-}example-service:${VERSION:-latest}
+    ports:
+      - 3001:3000
+      - 50052:50051
+    environment:
+      - CONNECTED_SERVICES=http://service-1:50051,http://service-3:50051
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+    healthcheck:
+      test: curl --fail http://localhost:3000/health
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
+  service-3:
+    build:
+      context: .
+      target: final
+    image: ${REPOSITORY:-}example-service:${VERSION:-latest}
+    ports:
+      - 3002:3000
+      - 50053:50051
+    environment:
+      - CONNECTED_SERVICES=http://service-1:50051,http://service-2:50051
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+    healthcheck:
+      test: curl --fail http://localhost:3000/health
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
