@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.96.3 # Get the latest from: https://github.com/antonbabenko/pre-commit-terraform/releases
+    rev: v1.98.0 # Get the latest from: https://github.com/antonbabenko/pre-commit-terraform/releases
     hooks:
       - id: terraform_fmt
       - id: terraform_providers_lock
@@ -18,11 +18,11 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/crate-ci/typos
-    rev: v1.29.4
+    rev: v1
     hooks:
       - id: typos
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.4
+    rev: v2.4.1
     hooks:
       - id: codespell
         additional_dependencies:
@@ -32,11 +32,11 @@ repos:
     hooks:
       - id: gitlint
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.23.1
+    rev: v8.24.2
     hooks:
       - id: gitleaks
   - repo: https://github.com/doublify/pre-commit-rust
-    rev: master
+    rev: v1.0
     hooks:
       - id: fmt
       - id: cargo-check
