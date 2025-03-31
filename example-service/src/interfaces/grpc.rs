@@ -4,6 +4,7 @@ use rand::random_range;
 use thiserror::Error;
 use tokio::sync::Mutex;
 use tonic::{Request, Response};
+use tracing::{info, trace};
 use word::{word_service_server::WordService, ChainRequest, ChainResponse};
 
 use crate::{
@@ -62,6 +63,7 @@ impl WordService for GrpcInterface {
         &self,
         request: Request<ChainRequest>,
     ) -> Result<Response<ChainResponse>, tonic::Status> {
+        trace!("Received chain request: {:?}", request);
         let random_word =
             self.store
                 .lock()
@@ -79,12 +81,19 @@ impl WordService for GrpcInterface {
 
         let message = request.into_inner();
         let mut new_chain = message.input.clone();
-        new_chain.push(random_word);
+        new_chain.push(random_word.clone());
+
+        info!(
+            "Added random word: {:?}, to chain request with count {:?}",
+            random_word, message.count
+        );
 
         if message.count > 0 {
             let mut clients = self.clients.lock().await;
             if !clients.is_empty() {
                 let random_client = random_range(0..clients.len());
+
+                info!("Chaining with client index: {:?}", random_client);
 
                 new_chain = clients
                     .get_mut(random_client)

@@ -54,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     info!("Starting example service...");
 
+    info!("Building config...");
     let config: ExampleAppConfig = Config::builder()
         .add_source(
             config::Environment::default()
@@ -71,6 +72,7 @@ async fn main() -> anyhow::Result<()> {
         .try_deserialize()
         .map_err(ExampleAppError::ConfigError)?;
 
+    info!("Building hashmap store...");
     let hashmap_store = Arc::new(Mutex::new(
         HashmapStore::new().map_err(ExampleAppError::HashmapStoreError)?,
     ));
@@ -89,12 +91,14 @@ async fn main() -> anyhow::Result<()> {
     let client_connect_task: JoinHandle<Result<(), GrpcClientError>> = tokio::spawn({
         let grpc_clients = grpc_clients.clone();
         async move {
+            info!("Building gRPC clients...");
             let mut clients = Vec::new();
             for service_url in config.connected_services {
-                clients.push(GrpcClient::new(service_url).await.map_err(|e| {
+                clients.push(GrpcClient::new(service_url.clone()).await.map_err(|e| {
                     warn!("gRPC client connect failed: {:?}", e);
                     e
-                })?)
+                })?);
+                debug!("Connected gRPC client to {:?}", service_url);
             }
             *grpc_clients.lock().await = clients;
             Ok(())
@@ -103,7 +107,7 @@ async fn main() -> anyhow::Result<()> {
 
     let grpc_interface = GrpcInterface::new(hashmap_store.clone(), grpc_clients.clone());
     let grpc_server = tokio::spawn(async move {
-        debug!("Starting gRPC interface on port {0}...", config.grpc_port);
+        info!("Starting gRPC interface on address {0}...", grpc_url);
         Server::builder()
             .add_service(WordServiceServer::new(grpc_interface))
             .serve(grpc_url)

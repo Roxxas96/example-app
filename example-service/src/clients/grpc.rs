@@ -3,13 +3,14 @@ use std::time::Duration;
 use async_recursion::async_recursion;
 use thiserror::Error;
 use tonic::transport::Channel;
+use tracing::trace;
 use word::{word_service_client::WordServiceClient, ChainRequest};
 
 pub mod word {
     tonic::include_proto!("word");
 }
 
-const MAX_RETRIES: u8 = 2;
+const MAX_RETRIES: u8 = 10;
 
 #[derive(Error, Debug)]
 pub enum GrpcClientError {
@@ -41,12 +42,14 @@ impl GrpcClient {
         word_chain: Vec<String>,
         count: u32,
     ) -> Result<Vec<String>, GrpcClientError> {
+        let request = ChainRequest {
+            input: word_chain,
+            count,
+        };
+        trace!("Sending chain request: {:?}", request.clone());
         Ok(self
             .client
-            .chain(ChainRequest {
-                input: word_chain,
-                count,
-            })
+            .chain(request)
             .await
             .map_err(|status| match status.code() {
                 tonic::Code::InvalidArgument => {

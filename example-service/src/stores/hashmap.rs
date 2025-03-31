@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use rand::Rng;
 use thiserror::Error;
-use tracing::{debug, trace};
+use tracing::trace;
 
 #[derive(Error, Debug)]
 pub enum HashmapStoreError {
@@ -24,8 +24,6 @@ pub struct HashmapStore {
 
 impl HashmapStore {
     pub fn new() -> Result<HashmapStore, HashmapStoreError> {
-        debug!("Creating new hashmap store...");
-
         let mut initial_store: HashMap<String, String> = HashMap::new();
 
         initial_store.insert("hello".to_string(), "hello".to_string());

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::{sync::Mutex, task::JoinHandle};
 use tower_http::trace::TraceLayer;
-use tracing::debug;
+use tracing::{info, trace};
 
 use crate::stores::hashmap::{HashmapStore, HashmapStoreError};
 
@@ -71,8 +71,6 @@ impl HttpInterface {
     }
 
     pub async fn start_app(&self, port: u16) -> JoinHandle<Result<(), HttpInterfaceError>> {
-        debug!("Starting HTTP interface on port {:?}...", port);
-
         let app = self.create_app();
 
         tokio::spawn(async move {
@@ -84,6 +82,7 @@ impl HttpInterface {
                     address: address.clone(),
                 })?;
 
+            info!("Starting http interface on address {0}...", address);
             axum::serve(listener, app)
                 .await
                 .map_err(|e| HttpInterfaceError::AxumServe { source: e, address })
@@ -110,6 +109,7 @@ async fn add_word(
     State(state): State<Arc<Mutex<HashmapStore>>>,
     Json(payload): Json<AddWordRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
+    trace!("Received add_word request for word: {}", payload.word);
     state
         .lock()
         .await
@@ -131,6 +131,7 @@ async fn get_word(
     State(state): State<Arc<Mutex<HashmapStore>>>,
     Path(word): Path<String>,
 ) -> Result<(StatusCode, Json<GetWordResponse>), (StatusCode, String)> {
+    trace!("Received get_word request for word: {}", word);
     state
         .lock()
         .await
@@ -152,6 +153,7 @@ async fn remove_word(
     State(state): State<Arc<Mutex<HashmapStore>>>,
     Json(payload): Json<RemoveWordRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
+    trace!("Received remove_word request for word: {}", payload.word);
     state
         .lock()
         .await
@@ -174,6 +176,7 @@ struct RandomWordResponse {
 async fn random_word(
     State(state): State<Arc<Mutex<HashmapStore>>>,
 ) -> Result<(StatusCode, Json<RandomWordResponse>), (StatusCode, String)> {
+    trace!("Received random_word request");
     state
         .lock()
         .await
