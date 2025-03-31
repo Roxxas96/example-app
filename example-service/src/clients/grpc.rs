@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use anyhow::Result;
 use async_recursion::async_recursion;
 use thiserror::Error;
 use tonic::transport::Channel;
@@ -10,10 +9,16 @@ pub mod word {
     tonic::include_proto!("word");
 }
 
+const MAX_RETRIES: u8 = 2;
+
 #[derive(Error, Debug)]
 pub enum GrpcClientError {
-    #[error("Failed to connect to the server: {0}")]
-    ConnectionError(tonic::transport::Error),
+    #[error("Failed to connect to the server")]
+    ConnectionError {
+        #[source]
+        source: tonic::transport::Error,
+        address: String,
+    },
     #[error("Bad request: {0}")]
     BadRequest(String),
     #[error("Internal server error")]
@@ -26,12 +31,16 @@ pub struct GrpcClient {
 
 impl GrpcClient {
     pub async fn new(service_url: String) -> Result<Self, GrpcClientError> {
-        let client = connect_to_client(service_url, 20).await?;
+        let client = connect_to_client(service_url, MAX_RETRIES).await?;
 
         Ok(GrpcClient { client })
     }
 
-    pub async fn chain(&mut self, word_chain: Vec<String>, count: u32) -> Result<Vec<String>> {
+    pub async fn chain(
+        &mut self,
+        word_chain: Vec<String>,
+        count: u32,
+    ) -> Result<Vec<String>, GrpcClientError> {
         Ok(self
             .client
             .chain(ChainRequest {
@@ -63,7 +72,10 @@ async fn connect_to_client(
                 tokio::time::sleep(Duration::from_secs(5)).await;
                 return connect_to_client(service_url, retries - 1).await;
             } else {
-                Err(GrpcClientError::ConnectionError(e))
+                Err(GrpcClientError::ConnectionError {
+                    source: e,
+                    address: service_url.clone(),
+                })
             }
         }
     }

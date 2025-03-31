@@ -4,7 +4,6 @@ mod stores;
 
 use std::{net::AddrParseError, sync::Arc};
 
-use anyhow::Result;
 use clients::grpc::{GrpcClient, GrpcClientError};
 use config::{Config, ConfigError};
 use interfaces::{
@@ -19,24 +18,28 @@ use tokio::{
     task::{JoinError, JoinHandle},
 };
 use tonic::transport::Server;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 #[derive(Error, Debug)]
 enum ExampleAppError {
-    #[error("Failed to build configuration: {0}")]
-    ConfigBuildError(ConfigError),
-    #[error("Failed to build hashmap store: {0}")]
-    HashmapStoreError(HashmapStoreError),
-    #[error("Failed to create gRPC client: {0}")]
-    GrpcClientError(GrpcClientError),
-    #[error("Failed to parse url configuration: {0}")]
-    UrlParseError(AddrParseError),
-    #[error("Failed to start http server: {0}")]
-    HttpServerStartError(HttpInterfaceError),
-    #[error("Failed to start gRPC server: {0}")]
-    GrpcServerStartError(GrpcInterfaceError),
-    #[error("Failed to start join handle: {0}")]
-    JoinHandleError(JoinError),
+    #[error("Config error")]
+    ConfigError(#[source] ConfigError),
+    #[error("Hashmap store error")]
+    HashmapStoreError(#[source] HashmapStoreError),
+    #[error("gRPC client error")]
+    GrpcClientError(#[source] GrpcClientError),
+    #[error("Failed to parse url for port {port:?}")]
+    UrlParseError {
+        #[source]
+        source: AddrParseError,
+        port: u16,
+    },
+    #[error("HTTP server error")]
+    HttpServerError(#[source] HttpInterfaceError),
+    #[error("gRPC server error")]
+    GrpcServerError(#[source] GrpcInterfaceError),
+    #[error("Join error")]
+    JoinHandleError(#[source] JoinError),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -47,7 +50,7 @@ struct ExampleAppConfig {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     info!("Starting example service...");
 
@@ -57,13 +60,16 @@ async fn main() -> Result<()> {
                 .try_parsing(true)
                 .list_separator(","),
         )
-        .set_default("http_port", 3000)?
-        .set_default("grpc_port", 50051)?
-        .set_default("connected_services", Vec::<String>::new())?
+        .set_default("http_port", 3000)
+        .map_err(ExampleAppError::ConfigError)?
+        .set_default("grpc_port", 50051)
+        .map_err(ExampleAppError::ConfigError)?
+        .set_default("connected_services", Vec::<String>::new())
+        .map_err(ExampleAppError::ConfigError)?
         .build()
-        .map_err(ExampleAppError::ConfigBuildError)?
+        .map_err(ExampleAppError::ConfigError)?
         .try_deserialize()
-        .map_err(ExampleAppError::ConfigBuildError)?;
+        .map_err(ExampleAppError::ConfigError)?;
 
     let hashmap_store = Arc::new(Mutex::new(
         HashmapStore::new().map_err(ExampleAppError::HashmapStoreError)?,
@@ -75,22 +81,26 @@ async fn main() -> Result<()> {
     let grpc_clients = Arc::new(Mutex::new(Vec::new()));
     let grpc_url = format!("0.0.0.0:{0}", config.grpc_port)
         .parse()
-        .map_err(ExampleAppError::UrlParseError)?;
+        .map_err(|e| ExampleAppError::UrlParseError {
+            source: e,
+            port: config.grpc_port,
+        })?;
 
-    // Start a task for connecting the gRPC clients asynchronously
     let client_connect_task: JoinHandle<Result<(), GrpcClientError>> = tokio::spawn({
         let grpc_clients = grpc_clients.clone();
         async move {
             let mut clients = Vec::new();
             for service_url in config.connected_services {
-                clients.push(GrpcClient::new(service_url).await?)
+                clients.push(GrpcClient::new(service_url).await.map_err(|e| {
+                    warn!("gRPC client connect failed: {:?}", e);
+                    e
+                })?)
             }
             *grpc_clients.lock().await = clients;
             Ok(())
         }
     });
 
-    // Now, we can start the gRPC server, even before the clients are connected
     let grpc_interface = GrpcInterface::new(hashmap_store.clone(), grpc_clients.clone());
     let grpc_server = tokio::spawn(async move {
         debug!("Starting gRPC interface on port {0}...", config.grpc_port);
@@ -98,7 +108,10 @@ async fn main() -> Result<()> {
             .add_service(WordServiceServer::new(grpc_interface))
             .serve(grpc_url)
             .await
-            .map_err(GrpcInterfaceError::GrpcServerError)
+            .map_err(|e| GrpcInterfaceError::GrpcServerError {
+                source: e,
+                address: grpc_url,
+            })
     });
 
     let join_handle = tokio::join!(http_server, grpc_server, client_connect_task);
@@ -106,11 +119,11 @@ async fn main() -> Result<()> {
     join_handle
         .0
         .map_err(ExampleAppError::JoinHandleError)?
-        .map_err(ExampleAppError::HttpServerStartError)?;
+        .map_err(ExampleAppError::HttpServerError)?;
     join_handle
         .1
         .map_err(ExampleAppError::JoinHandleError)?
-        .map_err(ExampleAppError::GrpcServerStartError)?;
+        .map_err(ExampleAppError::GrpcServerError)?;
     join_handle
         .2
         .map_err(ExampleAppError::JoinHandleError)?

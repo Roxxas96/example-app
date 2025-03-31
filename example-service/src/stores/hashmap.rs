@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
 use rand::Rng;
 use thiserror::Error;
 use tracing::{debug, trace};
@@ -8,7 +7,7 @@ use tracing::{debug, trace};
 #[derive(Error, Debug)]
 pub enum HashmapStoreError {
     #[error("Random decided to crash")]
-    Random(),
+    Random,
     #[error("Word {0} not found")]
     NotFound(String),
     #[error("Word {0} already exists")]
@@ -37,7 +36,7 @@ impl HashmapStore {
         initial_store.insert("?".to_string(), "?".to_string());
 
         if rand::random() {
-            return Err(HashmapStoreError::Random());
+            return Err(HashmapStoreError::Random);
         }
 
         Ok(HashmapStore {

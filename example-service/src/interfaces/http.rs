@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -17,10 +16,18 @@ use crate::stores::hashmap::{HashmapStore, HashmapStoreError};
 
 #[derive(Error, Debug)]
 pub enum HttpInterfaceError {
-    #[error("Axum serve error: {0}")]
-    AxumServe(std::io::Error),
-    #[error("Error creating the TCP listener: {0}")]
-    TcpListenerCreation(std::io::Error),
+    #[error("Axum serve error")]
+    AxumServe {
+        #[source]
+        source: std::io::Error,
+        address: String,
+    },
+    #[error("Error creating the TCP listener with address {address:?}")]
+    TcpListenerCreation {
+        #[source]
+        source: std::io::Error,
+        address: String,
+    },
     #[error("Word {0} not found")]
     NotFound(String),
     #[error("Word {0} already exists")]
@@ -69,13 +76,17 @@ impl HttpInterface {
         let app = self.create_app();
 
         tokio::spawn(async move {
-            let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{0}", port))
+            let address = format!("0.0.0.0:{0}", port);
+            let listener = tokio::net::TcpListener::bind(address.clone())
                 .await
-                .map_err(HttpInterfaceError::TcpListenerCreation)?;
+                .map_err(|e| HttpInterfaceError::TcpListenerCreation {
+                    source: e,
+                    address: address.clone(),
+                })?;
 
             axum::serve(listener, app)
                 .await
-                .map_err(HttpInterfaceError::AxumServe)
+                .map_err(|e| HttpInterfaceError::AxumServe { source: e, address })
         })
     }
 

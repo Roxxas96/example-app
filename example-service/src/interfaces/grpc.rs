@@ -1,6 +1,5 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
-use anyhow::Result;
 use rand::random_range;
 use thiserror::Error;
 use tokio::sync::Mutex;
@@ -18,8 +17,12 @@ pub mod word {
 
 #[derive(Error, Debug)]
 pub enum GrpcInterfaceError {
-    #[error("Error serving gRPC: {0}")]
-    GrpcServerError(tonic::transport::Error),
+    #[error("Error serving gRPC")]
+    GrpcServerError {
+        #[source]
+        source: tonic::transport::Error,
+        address: SocketAddr,
+    },
     #[error("Bad request: {0}")]
     BadRequest(String),
     #[error("Internal server error")]
