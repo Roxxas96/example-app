@@ -66,7 +66,6 @@ resource "kubernetes_secret_v1" "name" {
     "name"      = "harbor"
     "type"      = "helm"
     "url"       = "harbor.internal.${data.cloudflare_zone.roxxas96_dot_net.name}"
-    "project"   = "example-app-helm"
     "username"  = var.harbor_helm_username
     "password"  = var.harbor_helm_password
   }
