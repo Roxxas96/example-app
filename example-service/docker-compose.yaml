@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: final
-    image: ${REPOSITORY:-harbor.internal.roxxas96.net/homelab/}example-service:${VERSION:-latest}
+    image: ${REPOSITORY:-harbor.internal.roxxas96.net/example-app/}example-service:${VERSION:-latest}
     ports:
       - 3000:3000
       - 50051:50051
@@ -21,7 +21,7 @@ services:
     build:
       context: .
       target: final
-    image: ${REPOSITORY:-harbor.internal.roxxas96.net/homelab/}example-service:${VERSION:-latest}
+    image: ${REPOSITORY:-harbor.internal.roxxas96.net/example-app/}example-service:${VERSION:-latest}
     ports:
       - 3001:3000
       - 50052:50051
@@ -39,7 +39,7 @@ services:
     build:
       context: .
       target: final
-    image: ${REPOSITORY:-harbor.internal.roxxas96.net/homelab/}example-service:${VERSION:-latest}
+    image: ${REPOSITORY:-harbor.internal.roxxas96.net/example-app/}example-service:${VERSION:-latest}
     ports:
       - 3002:3000
       - 50053:50051

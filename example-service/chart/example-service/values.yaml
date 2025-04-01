@@ -2,7 +2,7 @@
 replicaCount: 1
 
 image:
-  repository: harbor.internal.roxxas96.net/homelab/example-service
+  repository: harbor.internal.roxxas96.net/example-app/example-service
   # -- This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.

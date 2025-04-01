@@ -18,7 +18,7 @@ Helm chart to deploy the example-service rust application
 | config.logLevel | string | `"info"` | Log level of the application |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` | This sets the pull policy for images. |
-| image.repository | string | `"harbor.internal.roxxas96.net/homelab/example-service"` |  |
+| image.repository | string | `"harbor.internal.roxxas96.net/example-app/example-service"` |  |
 | image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[{"name":"harbor-credentials"}]` | This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/ |
 | ingress.annotations | object | `{}` | Annotations that will be added to the ingress resource |

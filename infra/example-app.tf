@@ -5,7 +5,7 @@ resource "kubernetes_namespace_v1" "example-app" {
 }
 
 variable "harbor_credentials" {
-  description = "Credentials for the homelab-kube robot on harbor"
+  description = "Credentials for the kubernetes robot on harbor"
   sensitive   = true
   type        = string
 }
