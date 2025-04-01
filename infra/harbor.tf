@@ -4,22 +4,33 @@ resource "kubernetes_namespace_v1" "harbor" {
   }
 }
 
-variable "harbor_chart_version" {
-  description = "Version to use for the harbor chart"
-  type        = string
-  default     = "24.5.0"
-}
-
-resource "helm_release" "harbor" {
-  name      = "harbor"
-  namespace = kubernetes_namespace_v1.harbor.metadata[0].name
-
-  chart   = "oci://registry-1.docker.io/bitnamicharts/harbor"
-  version = var.harbor_chart_version
-
-  values = [templatefile("./templates/harbor.values.yaml", {
-    host = "harbor.internal.${data.cloudflare_zone.roxxas96_dot_net.name}"
-  })]
+resource "kubernetes_manifest" "application_harbor" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name       = "harbor"
+      namespace  = kubernetes_namespace_v1.harbor.metadata[0].name
+      finalizers = ["resources-finalizer.argocd.argoproj.io"]
+    }
+    spec = {
+      project = kubernetes_manifest.app_project_example_app.manifest.metadata.name
+      source = {
+        repoURL        = "registry-1.docker.io/bitnamicharts"
+        targetRevision = "*.*.*"
+        chart          = "harbor"
+        helm = {
+          values = templatefile("./templates/harbor.values.yaml", {
+            host = "harbor.internal.${data.cloudflare_zone.roxxas96_dot_net.name}"
+          })
+        }
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = kubernetes_namespace_v1.harbor.metadata[0].name
+      }
+    }
+  }
 }
 
 resource "cloudflare_dns_record" "harbor_internal" {
@@ -28,4 +39,35 @@ resource "cloudflare_dns_record" "harbor_internal" {
   type    = "A"
   ttl     = 1
   content = var.loadbalancer_ip
+}
+
+variable "harbor_helm_username" {
+  description = "Username for the kubernetes robot on harbor helm repo"
+  sensitive   = true
+  type        = string
+}
+
+variable "harbor_helm_password" {
+  description = "Username for the kubernetes robot on harbor helm repo"
+  sensitive   = true
+  type        = string
+}
+
+resource "kubernetes_secret_v1" "name" {
+  metadata {
+    name      = "harbor-repo"
+    namespace = data.kubernetes_namespace_v1.argocd.metadata[0].name
+    labels = {
+      "argocd.argoproj.io/secret-type" = "repository"
+    }
+  }
+  data = {
+    "enableOCI" = "true"
+    "name"      = "harbor"
+    "type"      = "helm"
+    "url"       = "harbor.internal.${data.cloudflare_zone.roxxas96_dot_net.name}"
+    "project"   = "example-app-helm"
+    "username"  = var.harbor_helm_username
+    "password"  = var.harbor_helm_password
+  }
 }
