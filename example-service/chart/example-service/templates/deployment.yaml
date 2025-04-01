@@ -42,8 +42,19 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.service.httpPort }}
               protocol: TCP
+            - name: grpc
+              containerPort: {{ .Values.service.grpcPort }}
+              protocol: TCP
+          envFrom:
+          - configMapRef:
+              name: {{ include "example-service.fullname" . }}
+          env:
+            - name: HTTP_PORT
+              value: "{{ .Values.service.httpPort }}"
+            - name: GRPC_PORT
+              value: "{{ .Values.service.grpcPort }}"
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
