@@ -78,7 +78,7 @@ jobs:
           else
             echo "appVersion=${{ steps.gitversion.outputs.MajorMinorPatch }}-rc${{ steps.gitversion.outputs.CommitsSinceVersionSource }}" >> $GITHUB_OUTPUT
           fi
-          OLD_CHART_VERSION=$(grep '^version:' example-service/chart/example-service/Chart.yaml | awk '{print $2}')
+          OLD_CHART_VERSION=$(grep '^version:' example-service/chart/example-service/Chart.yaml | awk '{print $2}' | tr -d '"')
           IFS='.' read -r MAJOR MINOR PATCH <<< "$OLD_CHART_VERSION"
           echo "chartVersion=$MAJOR.$MINOR.$((PATCH + 1))" >> $GITHUB_OUTPUT
 
@@ -167,7 +167,7 @@ jobs:
 
       - name: Sign the published Docker image
         if: github.ref == 'refs/heads/main'
-        run: echo "${{ steps.tags.outputs.tags }}" | xargs -I {} cosign sign -y {}@${{ steps.build-and-push.outputs.digest }}
+        run: echo "${{ steps.tags.outputs.tags }}" | tr ',' '\n' | xargs -I {} cosign sign -y {}@${{ steps.build-and-push.outputs.digest }}
 
   helm-publish:
     runs-on: ubuntu-latest
