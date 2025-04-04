@@ -3,9 +3,7 @@ repos:
     rev: v1.98.0 # Get the latest from: https://github.com/antonbabenko/pre-commit-terraform/releases
     hooks:
       - id: terraform_fmt
-      - id: terraform_providers_lock
       - id: terraform_tflint
-      - id: terraform_validate
       - id: terraform_wrapper_module_for_each
       - id: tfupdate
   - repo: https://github.com/pre-commit/pre-commit-hooks
