@@ -35,12 +35,37 @@ repos:
     rev: v8.24.2
     hooks:
       - id: gitleaks
-  - repo: https://github.com/doublify/pre-commit-rust
-    rev: v1.0
+  - repo: https://github.com/FeryET/pre-commit-rust
+    rev: v1.1.1
     hooks:
       - id: fmt
+        types:
+          - rust
+        args:
+          - --manifest-path
+          - example-service/Cargo.toml
+          - --
       - id: cargo-check
+        args:
+          - --manifest-path
+          - example-service/Cargo.toml
+          - --
+      - id: clippy
+        args:
+          - --manifest-path
+          - example-service/Cargo.toml
+          - --
+      - id: build
+        args:
+          - --manifest-path
+          - example-service/Cargo.toml
+          - --
+      - id: test
+        args:
+          - --manifest-path
+          - example-service/Cargo.toml
+          - --
   - repo: https://github.com/norwoodj/helm-docs
-    rev: ""
+    rev: "v1.14.2"
     hooks:
       - id: helm-docs
