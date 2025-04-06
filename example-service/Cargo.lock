@@ -377,7 +377,7 @@ dependencies = [
 
 [[package]]
 name = "example-service"
-version = "0.1.0-rc24"
+version = "0.1.0-rc26"
 dependencies = [
  "anyhow",
  "async-recursion",
