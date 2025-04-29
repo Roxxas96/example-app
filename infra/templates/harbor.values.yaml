@@ -7,7 +7,7 @@ ingress:
     ingressClassName: nginx
     hostname: ${host}
     annotations:
-      cert-manager.io/cluster-issuer: internal-prod
+      cert-manager.io/cluster-issuer: external-prod
     tls: true
 
 metrics:
