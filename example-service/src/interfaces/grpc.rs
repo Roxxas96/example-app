@@ -1,16 +1,12 @@
 use std::{net::SocketAddr, sync::Arc};
 
-use rand::random_range;
 use thiserror::Error;
 use tokio::sync::Mutex;
 use tonic::{Request, Response};
-use tracing::{info, trace};
+use tracing::trace;
 use word::{word_service_server::WordService, ChainRequest, ChainResponse};
 
-use crate::{
-    clients::grpc::GrpcClient,
-    stores::hashmap::{HashmapStore, HashmapStoreError},
-};
+use crate::core::{Core, CoreError};
 
 pub mod word {
     tonic::include_proto!("word");
@@ -41,19 +37,12 @@ impl Into<tonic::Status> for GrpcInterfaceError {
 }
 
 pub struct GrpcInterface {
-    store: Arc<Mutex<HashmapStore>>,
-    clients: Arc<Mutex<Vec<GrpcClient>>>,
+    core: Arc<Mutex<Core>>,
 }
 
 impl GrpcInterface {
-    pub fn new(
-        hashmap_store: Arc<Mutex<HashmapStore>>,
-        grpc_client: Arc<Mutex<Vec<GrpcClient>>>,
-    ) -> Self {
-        GrpcInterface {
-            store: hashmap_store,
-            clients: grpc_client,
-        }
+    pub fn new(core: Arc<Mutex<Core>>) -> Self {
+        GrpcInterface { core }
     }
 }
 
@@ -64,49 +53,18 @@ impl WordService for GrpcInterface {
         request: Request<ChainRequest>,
     ) -> Result<Response<ChainResponse>, tonic::Status> {
         trace!("Received chain request: {:?}", request);
-        let random_word =
-            self.store
-                .lock()
-                .await
-                .random_word()
-                .await
-                .map_err(|err| -> tonic::Status {
-                    match err {
-                        HashmapStoreError::Empty => {
-                            GrpcInterfaceError::BadRequest("Store is empty".to_string()).into()
-                        }
-                        _ => GrpcInterfaceError::InternalServerError.into(),
-                    }
-                })?;
 
         let message = request.into_inner();
-        let mut new_chain = message.input.clone();
-        new_chain.push(random_word.clone());
-
-        info!(
-            "Added random word: {:?}, to chain request with count {:?}",
-            random_word, message.count
-        );
-
-        if message.count > 0 {
-            let mut clients = self.clients.lock().await;
-            if !clients.is_empty() {
-                let random_client = random_range(0..clients.len());
-
-                info!("Chaining with client index: {:?}", random_client);
-
-                new_chain = clients
-                    .get_mut(random_client)
-                    .ok_or_else(|| -> tonic::Status {
-                        GrpcInterfaceError::InternalServerError.into()
-                    })?
-                    .chain(new_chain, message.count - 1)
-                    .await
-                    .map_err(|_| -> tonic::Status {
-                        GrpcInterfaceError::InternalServerError.into()
-                    })?;
-            }
-        }
+        let new_chain = self
+            .core
+            .lock()
+            .await
+            .chain(message.input, message.count)
+            .await
+            .map_err(|e| match e {
+                CoreError::HashmapStoreError(e) => tonic::Status::internal(e.to_string()),
+                _ => tonic::Status::unknown("Unknown error"),
+            })?;
 
         Ok(Response::new(ChainResponse { output: new_chain }))
     }

@@ -1,9 +1,11 @@
 mod clients;
+mod core;
 mod interfaces;
 mod stores;
 
 use std::{net::AddrParseError, sync::Arc};
 
+use crate::core::Core;
 use clients::grpc::{GrpcClient, GrpcClientError};
 use config::{Config, ConfigError};
 use interfaces::{
@@ -73,12 +75,7 @@ async fn main() -> anyhow::Result<()> {
         .map_err(ExampleAppError::ConfigError)?;
 
     info!("Building hashmap store...");
-    let hashmap_store = Arc::new(Mutex::new(
-        HashmapStore::new().map_err(ExampleAppError::HashmapStoreError)?,
-    ));
-
-    let http_interface = HttpInterface::new(hashmap_store.clone());
-    let http_server = http_interface.start_app(config.http_port).await;
+    let hashmap_store = HashmapStore::new().map_err(ExampleAppError::HashmapStoreError)?;
 
     let grpc_clients = Arc::new(Mutex::new(Vec::new()));
     let grpc_url = format!("0.0.0.0:{0}", config.grpc_port)
@@ -105,7 +102,12 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let grpc_interface = GrpcInterface::new(hashmap_store.clone(), grpc_clients.clone());
+    let core = Arc::new(Mutex::new(Core::new(hashmap_store, grpc_clients.clone())));
+
+    let http_interface = HttpInterface::new(core.clone());
+    let http_server = http_interface.start_app(config.http_port).await;
+
+    let grpc_interface = GrpcInterface::new(core.clone());
     let grpc_server = tokio::spawn(async move {
         info!("Starting gRPC interface on address {0}...", grpc_url);
         Server::builder()
