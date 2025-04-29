@@ -3,12 +3,12 @@ services:
     build:
       context: .
       target: final
-    image: ${REPOSITORY:-harbor.internal.roxxas96.net/example-app/}example-service:${VERSION:-latest}
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - 3000:3000
-      - 50051:50051
+      - "3000:3000"
+      - "50051:50051"
     environment:
-      - CONNECTED_SERVICES=http://service-2:50051,http://service-3:50051
+      - CONNECTED_SERVICES=grpc://service-2:50051,grpc://service-3:50051
       - RUST_LOG=${RUST_LOG:-info}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     healthcheck:
@@ -21,12 +21,12 @@ services:
     build:
       context: .
       target: final
-    image: ${REPOSITORY:-harbor.internal.roxxas96.net/example-app/}example-service:${VERSION:-latest}
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - 3001:3000
-      - 50052:50051
+      - "3001:3000"
+      - "50052:50051"
     environment:
-      - CONNECTED_SERVICES=http://service-1:50051,http://service-3:50051
+      - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-3:50051
       - RUST_LOG=${RUST_LOG:-info}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     healthcheck:
@@ -39,12 +39,12 @@ services:
     build:
       context: .
       target: final
-    image: ${REPOSITORY:-harbor.internal.roxxas96.net/example-app/}example-service:${VERSION:-latest}
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - 3002:3000
-      - 50053:50051
+      - "3002:3000"
+      - "50053:50051"
     environment:
-      - CONNECTED_SERVICES=http://service-1:50051,http://service-2:50051
+      - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-2:50051
       - RUST_LOG=${RUST_LOG:-info}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     healthcheck:

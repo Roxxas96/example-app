@@ -390,7 +390,6 @@ dependencies = [
  "tokio",
  "tonic",
  "tonic-build",
- "tower 0.5.2",
  "tower-http",
  "tracing",
  "tracing-subscriber",
