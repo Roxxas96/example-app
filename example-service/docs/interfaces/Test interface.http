@@ -1,0 +1,37 @@
+### Get a word
+
+GET {{http_url}}/word/{{word}}
+
+### Get random word
+
+POST {{http_url}}/word/random
+
+### Push a word
+
+POST {{http_url}}/word
+Content-Type: application/json
+
+{
+  "word": "{{word}}"
+}
+
+### Delete a word
+
+DELETE {{http_url}}/word
+Content-Type: application/json
+
+{
+  "word": "{{word}}"
+}
+
+### Test chain of services
+
+GRPC {{grpc_url}}/word.WordService/Chain
+
+{
+  "count": 2,
+  "input": [
+    "aaa",
+    "bbb"
+  ]
+}
