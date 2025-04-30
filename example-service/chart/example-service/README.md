@@ -43,7 +43,7 @@ Helm chart to deploy the example-service rust application
 | securityContext.runAsNonRoot | bool | `true` |  |
 | securityContext.runAsUser | int | `10001` |  |
 | service.grpcPort | int | `50051` | This sets the grpc ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports |
-| service.httpPort | int | `3000` | This sets the http ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports |
+| service.httpPort | int | `3001` | This sets the http ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports |
 | service.type | string | `"ClusterIP"` | This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types |
 | serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
 | serviceAccount.automount | bool | `true` | Automatically mount a ServiceAccount's API credentials? |

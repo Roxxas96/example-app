@@ -5,14 +5,14 @@ services:
       target: final
     image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - "3000:3000"
+      - "3001:3001"
       - "50051:50051"
     environment:
-      - CONNECTED_SERVICES=grpc://service-2:50051,grpc://service-3:50051
+      - CONNECTED_SERVICES=grpc://service-2:50051,grpc://service-3:50051,grpc://service-4:50051,grpc://service-5:50051
       - RUST_LOG=${RUST_LOG:-info}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     healthcheck:
-      test: curl --fail http://localhost:3000/health
+      test: curl --fail http://localhost:3001/health
       interval: 30s
       timeout: 30s
       retries: 3
@@ -23,14 +23,14 @@ services:
       target: final
     image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - "3001:3000"
+      - "3002:3001"
       - "50052:50051"
     environment:
-      - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-3:50051
+      - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-3:50051,grpc://service-4:50051,grpc://service-5:50051
       - RUST_LOG=${RUST_LOG:-info}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     healthcheck:
-      test: curl --fail http://localhost:3000/health
+      test: curl --fail http://localhost:3001/health
       interval: 30s
       timeout: 30s
       retries: 3
@@ -41,14 +41,50 @@ services:
       target: final
     image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - "3002:3000"
+      - "3003:3001"
       - "50053:50051"
     environment:
-      - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-2:50051
+      - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-2:50051,grpc://service-4:50051,grpc://service-5:50051
       - RUST_LOG=${RUST_LOG:-info}
       - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     healthcheck:
-      test: curl --fail http://localhost:3000/health
+      test: curl --fail http://localhost:3001/health
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
+  service-4:
+    build:
+      context: .
+      target: final
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
+    ports:
+      - "3004:3001"
+      - "50054:50051"
+    environment:
+      - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-2:50051,grpc://service-3:50051,grpc://service-5:50051
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+    healthcheck:
+      test: curl --fail http://localhost:3001/health
+      interval: 30s
+      timeout: 30s
+      retries: 3
+      start_period: 5s
+  service-5:
+    build:
+      context: .
+      target: final
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
+    ports:
+      - "3005:3001"
+      - "50055:50051"
+    environment:
+      - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-2:50051,grpc://service-3:50051,grpc://service-4:50051
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=${RUST_BACKTRACE:-1}
+    healthcheck:
+      test: curl --fail http://localhost:3001/health
       interval: 30s
       timeout: 30s
       retries: 3

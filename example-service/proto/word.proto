@@ -3,14 +3,19 @@ syntax = "proto3";
 package word;
 
 service WordService {
-    rpc Chain(ChainRequest) returns (ChainResponse) {}
+  rpc Chain(ChainRequest) returns (ChainResponse) {}
+  rpc Health(HealthRequest) returns (HealthResponse) {}
 }
 
 message ChainRequest {
-    repeated string input = 1;
-    uint32 count = 2;
+  repeated string input = 1;
+  uint32 count = 2;
 }
 
 message ChainResponse {
-    repeated string output = 1;
+  repeated string output = 1;
 }
+
+message HealthRequest {}
+
+message HealthResponse {}

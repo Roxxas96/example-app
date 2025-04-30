@@ -24,12 +24,25 @@ Content-Type: application/json
   "word": "{{word}}"
 }
 
-### Test chain of services
+### Test chain of services HTTP
+
+POST {{http_url}}/word/chain
+Content-Type: application/json
+
+{
+  "count": 5,
+  "input": [
+    "aaa",
+    "bbb"
+  ]
+}
+
+### Test chain of services gRPC
 
 GRPC {{grpc_url}}/word.WordService/Chain
 
 {
-  "count": 2,
+  "count": 5,
   "input": [
     "aaa",
     "bbb"

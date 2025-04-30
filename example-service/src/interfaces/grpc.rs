@@ -1,12 +1,12 @@
+use crate::core::{Core, CoreError};
+use std::time::Duration;
 use std::{net::SocketAddr, sync::Arc};
-
 use thiserror::Error;
 use tokio::sync::Mutex;
-use tonic::{Request, Response};
+use tonic::{Request, Response, Status};
 use tracing::trace;
 use word::{word_service_server::WordService, ChainRequest, ChainResponse};
-
-use crate::core::{Core, CoreError};
+use word::{HealthRequest, HealthResponse};
 
 pub mod word {
     tonic::include_proto!("word");
@@ -67,5 +67,12 @@ impl WordService for GrpcInterface {
             })?;
 
         Ok(Response::new(ChainResponse { output: new_chain }))
+    }
+
+    async fn health(
+        &self,
+        _request: Request<HealthRequest>,
+    ) -> Result<Response<HealthResponse>, Status> {
+        Ok(Response::new(HealthResponse {}))
     }
 }

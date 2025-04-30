@@ -36,7 +36,7 @@ COPY --from=build /bin/server /bin/
 
 ENV RUST_LOG=info
 ENV RUST_BACKTRACE=1
-EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "curl", "-fL", "http://localhost:3000/health" ]
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "curl", "-fL", "http://localhost:3001/health" ]
 
 CMD ["/bin/server"]

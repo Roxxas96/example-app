@@ -18,18 +18,20 @@ pub enum CoreError {
     GrpcClientGetError,
     #[error("gRPC client error")]
     GrpcClientError(#[source] GrpcClientError),
+    #[error("Index error when picking random element in Vec")]
+    IndexError,
 }
 
 pub struct Core {
     store: HashmapStore,
-    clients: Arc<Mutex<Vec<GrpcClient>>>,
+    connected_services: Vec<String>,
 }
 
 impl Core {
-    pub fn new(hashmap_store: HashmapStore, grpc_client: Arc<Mutex<Vec<GrpcClient>>>) -> Self {
+    pub fn new(hashmap_store: HashmapStore, connected_services: Vec<String>) -> Self {
         Core {
             store: hashmap_store,
-            clients: grpc_client,
+            connected_services,
         }
     }
 
@@ -94,15 +96,19 @@ impl Core {
         new_chain.push(random_word);
 
         if count > 0 {
-            let mut clients = self.clients.lock().await;
-            if !clients.is_empty() {
-                let random_client = random_range(0..clients.len());
+            if !self.connected_services.is_empty() {
+                let random_service = self
+                    .connected_services
+                    .get(random_range(0..self.connected_services.len()))
+                    .ok_or(CoreError::IndexError)?;
 
-                info!("Chaining with client index: {:?}", random_client);
+                info!("Chaining with client: {:?}", random_service);
 
-                new_chain = clients
-                    .get_mut(random_client)
-                    .ok_or(CoreError::GrpcClientGetError)?
+                let mut client = GrpcClient::new(random_service.to_string())
+                    .await
+                    .map_err(CoreError::GrpcClientError)?;
+
+                new_chain = client
                     .chain(new_chain, count - 1)
                     .await
                     .map_err(CoreError::GrpcClientError)?;

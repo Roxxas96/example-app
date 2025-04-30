@@ -94,6 +94,7 @@ impl HttpInterface {
             .route("/word", post(add_word).delete(remove_word))
             .route("/word/{word}", get(get_word))
             .route("/word/random", post(random_word))
+            .route("/word/chain", post(chain))
             .with_state(self.store.clone())
             .route(
                 "/health",
@@ -193,6 +194,7 @@ async fn random_word(
     State(state): State<Arc<Mutex<Core>>>,
 ) -> Result<(StatusCode, Json<RandomWordResponse>), (StatusCode, String)> {
     trace!("Received random_word request");
+    tokio::time::sleep(Duration::from_secs(5)).await;
     state
         .lock()
         .await
@@ -208,4 +210,32 @@ async fn random_word(
             _ => HttpInterfaceError::InternalServerError.into(),
         })
         .map(|word| (StatusCode::OK, Json(RandomWordResponse { word })))
+}
+
+#[derive(Deserialize)]
+struct ChainRequest {
+    pub input: Vec<String>,
+    pub count: u32,
+}
+
+#[derive(Serialize)]
+struct ChainResponse {
+    pub outputs: Vec<String>,
+}
+
+async fn chain(
+    State(state): State<Arc<Mutex<Core>>>,
+    Json(payload): Json<ChainRequest>,
+) -> Result<(StatusCode, Json<ChainResponse>), (StatusCode, String)> {
+    trace!("Received chain request");
+    // Implement the logic to generate a chain of words based on the inputs and count
+    state
+        .lock()
+        .await
+        .chain(payload.input, payload.count)
+        .await
+        .map_err(|err| match err {
+            _ => HttpInterfaceError::InternalServerError.into(),
+        })
+        .map(|chain| Ok((StatusCode::OK, Json(ChainResponse { outputs: chain }))))?
 }
