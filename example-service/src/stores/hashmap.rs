@@ -70,7 +70,7 @@ impl HashmapStore {
         Ok(())
     }
 
-    pub async fn random_word(&mut self) -> Result<String, HashmapStoreError> {
+    pub async fn random_word(&self) -> Result<String, HashmapStoreError> {
         trace!("Getting a random word from hashmap store...");
 
         if self.word_store.is_empty() {

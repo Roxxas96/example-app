@@ -1,7 +1,6 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use crate::core::{Core, CoreError};
-use crate::stores::hashmap::HashmapStoreError;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -10,9 +9,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tokio::{sync::Mutex, task::JoinHandle, time::sleep};
+use tokio::task::JoinHandle;
 use tower_http::trace::TraceLayer;
-use tracing::{info, trace};
+use tracing::{info, trace, warn};
 
 #[derive(Error, Debug)]
 pub enum HttpInterfaceError {
@@ -60,14 +59,12 @@ impl Into<(StatusCode, String)> for HttpInterfaceError {
 }
 
 pub struct HttpInterface {
-    store: Arc<Mutex<Core>>,
+    core: Core,
 }
 
 impl HttpInterface {
-    pub fn new(hashmap_store: Arc<Mutex<Core>>) -> Self {
-        HttpInterface {
-            store: hashmap_store,
-        }
+    pub fn new(core: Core) -> Self {
+        HttpInterface { core }
     }
 
     pub async fn start_app(&self, port: u16) -> JoinHandle<Result<(), HttpInterfaceError>> {
@@ -95,14 +92,8 @@ impl HttpInterface {
             .route("/word/{word}", get(get_word))
             .route("/word/random", post(random_word))
             .route("/word/chain", post(chain))
-            .with_state(self.store.clone())
-            .route(
-                "/health",
-                get(|| async {
-                    sleep(Duration::from_secs(5)).await;
-                    "Ok"
-                }),
-            )
+            .with_state(self.core.clone())
+            .route("/health", get(|| async { "Ok" }))
             .layer(TraceLayer::new_for_http())
             .layer(axum_metrics::MetricLayer::default())
     }
@@ -114,20 +105,15 @@ struct AddWordRequest {
 }
 
 async fn add_word(
-    State(state): State<Arc<Mutex<Core>>>,
+    State(mut state): State<Core>,
     Json(payload): Json<AddWordRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     trace!("Received add_word request for word: {}", payload.word);
     state
-        .lock()
-        .await
         .add_word(payload.word.clone())
         .await
         .map_err(|err| match err {
-            CoreError::HashmapStoreError(err) => match err {
-                HashmapStoreError::AlreadyExists(word) => HttpInterfaceError::Conflict(word).into(),
-                _ => HttpInterfaceError::InternalServerError.into(),
-            },
+            CoreError::AlreadyExists(word) => HttpInterfaceError::Conflict(word).into(),
             _ => HttpInterfaceError::InternalServerError.into(),
         })
         .map(|_| StatusCode::CREATED)
@@ -139,20 +125,15 @@ struct GetWordResponse {
 }
 
 async fn get_word(
-    State(state): State<Arc<Mutex<Core>>>,
+    State(state): State<Core>,
     Path(word): Path<String>,
 ) -> Result<(StatusCode, Json<GetWordResponse>), (StatusCode, String)> {
     trace!("Received get_word request for word: {}", word);
     state
-        .lock()
-        .await
         .get_word(word.clone())
         .await
         .map_err(|err| match err {
-            CoreError::HashmapStoreError(err) => match err {
-                HashmapStoreError::NotFound(word) => HttpInterfaceError::NotFound(word).into(),
-                _ => HttpInterfaceError::InternalServerError.into(),
-            },
+            CoreError::NotFound(word) => HttpInterfaceError::NotFound(word).into(),
             _ => HttpInterfaceError::InternalServerError.into(),
         })
         .map(|word| (StatusCode::OK, Json(GetWordResponse { word })))
@@ -164,23 +145,17 @@ struct RemoveWordRequest {
 }
 
 async fn remove_word(
-    State(state): State<Arc<Mutex<Core>>>,
+    State(mut state): State<Core>,
     Json(payload): Json<RemoveWordRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     trace!("Received remove_word request for word: {}", payload.word);
     state
-        .lock()
-        .await
         .delete_word(payload.word.clone())
         .await
         .map_err(|err| match err {
-            CoreError::HashmapStoreError(err) => match err {
-                HashmapStoreError::NotFound(word) => {
-                    HttpInterfaceError::BadRequest(format!("Word {:?} does not exists", word))
-                        .into()
-                }
-                _ => HttpInterfaceError::InternalServerError.into(),
-            },
+            CoreError::NotFound(word) => {
+                HttpInterfaceError::BadRequest(format!("Word {:?} does not exists", word)).into()
+            }
             _ => HttpInterfaceError::InternalServerError.into(),
         })
         .map(|_| StatusCode::OK)
@@ -192,22 +167,15 @@ struct RandomWordResponse {
 }
 
 async fn random_word(
-    State(state): State<Arc<Mutex<Core>>>,
+    State(state): State<Core>,
 ) -> Result<(StatusCode, Json<RandomWordResponse>), (StatusCode, String)> {
     trace!("Received random_word request");
     tokio::time::sleep(Duration::from_secs(5)).await;
     state
-        .lock()
-        .await
         .random_word()
         .await
         .map_err(|err| match err {
-            CoreError::HashmapStoreError(err) => match err {
-                HashmapStoreError::Empty => {
-                    HttpInterfaceError::BadRequest("Store is empty".to_string()).into()
-                }
-                _ => HttpInterfaceError::InternalServerError.into(),
-            },
+            CoreError::Empty => HttpInterfaceError::BadRequest("Store is empty".to_string()).into(),
             _ => HttpInterfaceError::InternalServerError.into(),
         })
         .map(|word| (StatusCode::OK, Json(RandomWordResponse { word })))
@@ -225,17 +193,22 @@ struct ChainResponse {
 }
 
 async fn chain(
-    State(state): State<Arc<Mutex<Core>>>,
+    State(state): State<Core>,
     Json(payload): Json<ChainRequest>,
 ) -> Result<(StatusCode, Json<ChainResponse>), (StatusCode, String)> {
     trace!("Received chain request");
     // Implement the logic to generate a chain of words based on the inputs and count
     state
-        .lock()
-        .await
         .chain(payload.input, payload.count)
         .await
         .map_err(|err| match err {
+            CoreError::NoConnectedServices => {
+                warn!("An attempt to chain was called but service is not connected to another example-service");
+                HttpInterfaceError::BadRequest(
+                    "This service is not connected to another example-service".to_string(),
+                ).into()
+            },
+            CoreError::Empty => HttpInterfaceError::BadRequest("This service is not connected to another example-service".to_string()).into(),
             _ => HttpInterfaceError::InternalServerError.into(),
         })
         .map(|chain| Ok((StatusCode::OK, Json(ChainResponse { outputs: chain }))))?

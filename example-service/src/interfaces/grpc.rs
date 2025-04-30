@@ -1,8 +1,6 @@
 use crate::core::{Core, CoreError};
-use std::time::Duration;
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 use thiserror::Error;
-use tokio::sync::Mutex;
 use tonic::{Request, Response, Status};
 use tracing::trace;
 use word::{word_service_server::WordService, ChainRequest, ChainResponse};
@@ -26,22 +24,22 @@ pub enum GrpcInterfaceError {
     InternalServerError,
 }
 
-impl Into<tonic::Status> for GrpcInterfaceError {
-    fn into(self) -> tonic::Status {
+impl Into<Status> for GrpcInterfaceError {
+    fn into(self) -> Status {
         match self {
-            GrpcInterfaceError::BadRequest(msg) => tonic::Status::invalid_argument(msg),
-            GrpcInterfaceError::InternalServerError => tonic::Status::internal("Internal error"),
-            _ => tonic::Status::internal("Unknown error"),
+            GrpcInterfaceError::BadRequest(msg) => Status::invalid_argument(msg),
+            GrpcInterfaceError::InternalServerError => Status::internal("Internal error"),
+            _ => Status::internal("Unknown error"),
         }
     }
 }
 
 pub struct GrpcInterface {
-    core: Arc<Mutex<Core>>,
+    core: Core,
 }
 
 impl GrpcInterface {
-    pub fn new(core: Arc<Mutex<Core>>) -> Self {
+    pub fn new(core: Core) -> Self {
         GrpcInterface { core }
     }
 }
@@ -51,19 +49,24 @@ impl WordService for GrpcInterface {
     async fn chain(
         &self,
         request: Request<ChainRequest>,
-    ) -> Result<Response<ChainResponse>, tonic::Status> {
+    ) -> Result<Response<ChainResponse>, Status> {
         trace!("Received chain request: {:?}", request);
 
         let message = request.into_inner();
         let new_chain = self
             .core
-            .lock()
-            .await
             .chain(message.input, message.count)
             .await
             .map_err(|e| match e {
-                CoreError::HashmapStoreError(e) => tonic::Status::internal(e.to_string()),
-                _ => tonic::Status::unknown("Unknown error"),
+                CoreError::NoConnectedServices => {
+                    <GrpcInterfaceError as Into<Status>>::into(GrpcInterfaceError::BadRequest(
+                        "This service is not connected to an example-service".to_string(),
+                    ))
+                }
+                CoreError::Empty => <GrpcInterfaceError as Into<Status>>::into(
+                    GrpcInterfaceError::BadRequest("The store is empty".to_string()),
+                ),
+                _ => GrpcInterfaceError::InternalServerError.into(),
             })?;
 
         Ok(Response::new(ChainResponse { output: new_chain }))

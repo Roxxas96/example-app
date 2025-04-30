@@ -4,7 +4,6 @@ mod interfaces;
 mod stores;
 
 use crate::core::Core;
-use clients::grpc::{GrpcClient, GrpcClientError};
 use config::{Config, ConfigError};
 use interfaces::{
     grpc::{word::word_service_server::WordServiceServer, GrpcInterface, GrpcInterfaceError},
@@ -16,12 +15,9 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::{net::AddrParseError, sync::Arc};
 use stores::hashmap::{HashmapStore, HashmapStoreError};
 use thiserror::Error;
-use tokio::{
-    sync::Mutex,
-    task::{JoinError, JoinHandle},
-};
+use tokio::{sync::RwLock, task::JoinError};
 use tonic::transport::Server;
-use tracing::{debug, info, warn};
+use tracing::info;
 
 #[derive(Error, Debug)]
 enum ExampleAppError {
@@ -92,15 +88,15 @@ async fn main() -> anyhow::Result<()> {
     info!("Building hashmap store...");
     let hashmap_store = HashmapStore::new().map_err(ExampleAppError::HashmapStoreError)?;
 
-    let core = Arc::new(Mutex::new(Core::new(
-        hashmap_store,
+    let core = Core::new(
+        Arc::new(RwLock::new(hashmap_store)),
         config.connected_services,
-    )));
+    );
 
     let http_interface = HttpInterface::new(core.clone());
     let http_server = http_interface.start_app(config.http_port).await;
 
-    let grpc_interface = GrpcInterface::new(core.clone());
+    let grpc_interface = GrpcInterface::new(core);
     let grpc_url = format!("0.0.0.0:{0}", config.grpc_port)
         .parse()
         .map_err(|e| ExampleAppError::UrlParseError {

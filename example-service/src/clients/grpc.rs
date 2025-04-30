@@ -73,7 +73,7 @@ async fn connect_to_client(
             if retries > 0 {
                 tracing::warn!("Failed to connect to the server: {0}. Retrying...", e);
                 tokio::time::sleep(Duration::from_secs(5)).await;
-                return connect_to_client(service_url, retries - 1).await;
+                connect_to_client(service_url, retries - 1).await
             } else {
                 Err(GrpcClientError::ConnectionError {
                     source: e,
