@@ -1,21 +1,16 @@
-use std::sync::Arc;
-
-use rand::random_range;
-use thiserror::Error;
-use tokio::sync::Mutex;
-use tracing::{debug, info};
-
+use crate::stores::hashmap::HashmapStoreError::WrongIndexGeneration;
 use crate::{
     clients::grpc::{GrpcClient, GrpcClientError},
     stores::hashmap::{HashmapStore, HashmapStoreError},
 };
+use rand::random_range;
+use thiserror::Error;
+use tracing::{debug, error, info};
 
 #[derive(Error, Debug)]
 pub enum CoreError {
     #[error("Hashmap store error")]
     HashmapStoreError(#[source] HashmapStoreError),
-    #[error("Failed to get mutable reference for gRPC client")]
-    GrpcClientGetError,
     #[error("gRPC client error")]
     GrpcClientError(#[source] GrpcClientError),
     #[error("Index error when picking random element in Vec")]
@@ -65,11 +60,7 @@ impl Core {
     pub async fn random_word(&mut self) -> Result<String, CoreError> {
         info!("Getting random word...");
 
-        let random_word = self
-            .store
-            .random_word()
-            .await
-            .map_err(CoreError::HashmapStoreError)?;
+        let random_word = self.select_random_word().await?;
 
         debug!("Picked random word: {0}", random_word);
 
@@ -81,11 +72,7 @@ impl Core {
         chain: Vec<String>,
         count: u32,
     ) -> Result<Vec<String>, CoreError> {
-        let random_word = self
-            .store
-            .random_word()
-            .await
-            .map_err(CoreError::HashmapStoreError)?;
+        let random_word = self.select_random_word().await?;
 
         info!(
             "Adding word {0} to the chain... Remaining count: {1}",
@@ -97,24 +84,59 @@ impl Core {
 
         if count > 0 {
             if !self.connected_services.is_empty() {
-                let random_service = self
-                    .connected_services
-                    .get(random_range(0..self.connected_services.len()))
-                    .ok_or(CoreError::IndexError)?;
-
-                info!("Chaining with client: {:?}", random_service);
-
-                let mut client = GrpcClient::new(random_service.to_string())
-                    .await
-                    .map_err(CoreError::GrpcClientError)?;
-
-                new_chain = client
-                    .chain(new_chain, count - 1)
-                    .await
-                    .map_err(CoreError::GrpcClientError)?;
+                new_chain = self.chain_with_random_service(new_chain, count).await?;
             }
         }
 
         Ok(new_chain)
+    }
+
+    async fn select_random_word(&mut self) -> Result<String, CoreError> {
+        Ok(self.store.random_word().await.map_err(|err| match err {
+            WrongIndexGeneration => {
+                error!("Error during selection of random word: {:?}", err);
+                CoreError::HashmapStoreError(err)
+            }
+            _ => CoreError::HashmapStoreError(err),
+        })?)
+    }
+
+    async fn chain_with_random_service(
+        &self,
+        chain: Vec<String>,
+        count: u32,
+    ) -> Result<Vec<String>, CoreError> {
+        let random_service = self
+            .connected_services
+            .get(random_range(0..self.connected_services.len()))
+            .ok_or(CoreError::IndexError)
+            .map_err(|err| match err {
+                _ => {
+                    error!("Error picking random service in list: {:?}", err);
+                    CoreError::IndexError
+                }
+            })?;
+
+        info!("Chaining with client: {:?}", random_service);
+
+        let mut client =
+            GrpcClient::new(random_service.to_string())
+                .await
+                .map_err(|err| match err {
+                    _ => {
+                        error!("Error connecting to client {:?}: {:?}", random_service, err);
+                        CoreError::GrpcClientError(err)
+                    }
+                })?;
+
+        Ok(client
+            .chain(chain, count - 1)
+            .await
+            .map_err(|err| match err {
+                _ => {
+                    error!("Error chaining to client {:?}: {:?}", random_service, err);
+                    CoreError::GrpcClientError(err)
+                }
+            })?)
     }
 }

@@ -71,8 +71,9 @@ impl WordService for GrpcInterface {
 
     async fn health(
         &self,
-        _request: Request<HealthRequest>,
+        request: Request<HealthRequest>,
     ) -> Result<Response<HealthResponse>, Status> {
+        trace!("Received health request: {:?}", request);
         Ok(Response::new(HealthResponse {}))
     }
 }

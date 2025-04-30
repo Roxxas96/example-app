@@ -10,7 +10,7 @@ pub mod word {
     tonic::include_proto!("word");
 }
 
-const MAX_RETRIES: u8 = 10;
+const MAX_RETRIES: u8 = 3;
 
 #[derive(Error, Debug)]
 pub enum GrpcClientError {
