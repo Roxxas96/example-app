@@ -535,7 +535,6 @@ dependencies = [
 name = "example-service"
 version = "0.1.0-rc26"
 dependencies = [
- "anyhow",
  "async-recursion",
  "axum 0.8.4",
  "axum-metrics",

@@ -50,7 +50,7 @@ struct ExampleAppConfig {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<(), ExampleAppError> {
     tracing_subscriber::fmt::init();
     info!("Starting example service...");
 
