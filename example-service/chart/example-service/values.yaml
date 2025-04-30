@@ -63,6 +63,17 @@ service:
   # -- This sets the grpc ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   grpcPort: 50051
 
+metrics:
+  # -- Enable/Disable metrics service endpoint
+  enabled: true
+  # -- This sets the metrics ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 9001
+  # -- Set the metrics endpoint that prometheus will scrape
+  endpoint: /metrics
+  serviceMonitor:
+    # -- Enable/Disable creation of a prometheus serviceMonitor
+    enabled: true
+
 ingress:
   # -- Enable/Disable Ingress
   enabled: false
@@ -91,10 +102,10 @@ resources:
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
+# limits:
+#   cpu: 100m
+#   memory: 128Mi
+# requests:
 #   cpu: 100m
 #   memory: 128Mi
 

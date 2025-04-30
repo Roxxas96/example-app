@@ -104,6 +104,7 @@ impl HttpInterface {
                 }),
             )
             .layer(TraceLayer::new_for_http())
+            .layer(axum_metrics::MetricLayer::default())
     }
 }
 

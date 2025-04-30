@@ -3,8 +3,6 @@ mod core;
 mod interfaces;
 mod stores;
 
-use std::{net::AddrParseError, sync::Arc};
-
 use crate::core::Core;
 use clients::grpc::{GrpcClient, GrpcClientError};
 use config::{Config, ConfigError};
@@ -12,7 +10,10 @@ use interfaces::{
     grpc::{word::word_service_server::WordServiceServer, GrpcInterface, GrpcInterfaceError},
     http::{HttpInterface, HttpInterfaceError},
 };
+use metrics_exporter_prometheus::PrometheusBuilder;
 use serde::{Deserialize, Serialize};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{net::AddrParseError, sync::Arc};
 use stores::hashmap::{HashmapStore, HashmapStoreError};
 use thiserror::Error;
 use tokio::{
@@ -28,8 +29,6 @@ enum ExampleAppError {
     ConfigError(#[source] ConfigError),
     #[error("Hashmap store error")]
     HashmapStoreError(#[source] HashmapStoreError),
-    #[error("gRPC client error")]
-    GrpcClientError(#[source] GrpcClientError),
     #[error("Failed to parse url for port {port:?}")]
     UrlParseError {
         #[source]
@@ -42,12 +41,15 @@ enum ExampleAppError {
     GrpcServerError(#[source] GrpcInterfaceError),
     #[error("Join error")]
     JoinHandleError(#[source] JoinError),
+    #[error("Error with Prometheus interface")]
+    PrometheusError(#[source] metrics_exporter_prometheus::BuildError),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ExampleAppConfig {
     http_port: u16,
     grpc_port: u16,
+    metrics_port: u16,
     connected_services: Vec<String>,
 }
 
@@ -67,12 +69,25 @@ async fn main() -> anyhow::Result<()> {
         .map_err(ExampleAppError::ConfigError)?
         .set_default("grpc_port", 50051)
         .map_err(ExampleAppError::ConfigError)?
+        .set_default("metrics_port", 9001)
+        .map_err(ExampleAppError::ConfigError)?
         .set_default("connected_services", Vec::<String>::new())
         .map_err(ExampleAppError::ConfigError)?
         .build()
         .map_err(ExampleAppError::ConfigError)?
         .try_deserialize()
         .map_err(ExampleAppError::ConfigError)?;
+
+    let metrics_address =
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), config.metrics_port);
+    info!(
+        "Starting metrics exporter on address {:?}...",
+        metrics_address
+    );
+    PrometheusBuilder::new()
+        .with_http_listener(metrics_address)
+        .install()
+        .map_err(ExampleAppError::PrometheusError)?;
 
     info!("Building hashmap store...");
     let hashmap_store = HashmapStore::new().map_err(ExampleAppError::HashmapStoreError)?;

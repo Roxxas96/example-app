@@ -3,6 +3,7 @@ use crate::{
     clients::grpc::{GrpcClient, GrpcClientError},
     stores::hashmap::{HashmapStore, HashmapStoreError},
 };
+use metrics::{counter, gauge};
 use rand::random_range;
 use thiserror::Error;
 use tracing::{debug, error, info};
@@ -32,6 +33,7 @@ impl Core {
 
     pub async fn get_word(&self, word: String) -> Result<String, CoreError> {
         info!("Getting word {0}...", word);
+        counter!("get_word_num_call").increment(1);
         Ok(self
             .store
             .get_word(word)
@@ -41,6 +43,7 @@ impl Core {
 
     pub async fn add_word(&mut self, word: String) -> Result<(), CoreError> {
         info!("Adding word {0}...", word);
+        counter!("add_word_num_call").increment(1);
         Ok(self
             .store
             .add_word(word)
@@ -50,6 +53,7 @@ impl Core {
 
     pub async fn delete_word(&mut self, word: String) -> Result<(), CoreError> {
         info!("Deleting word {0}...", word);
+        counter!("delete_word_num_call").increment(1);
         Ok(self
             .store
             .remove_word(word)
@@ -59,6 +63,7 @@ impl Core {
 
     pub async fn random_word(&mut self) -> Result<String, CoreError> {
         info!("Getting random word...");
+        counter!("random_word_num_call").increment(1);
 
         let random_word = self.select_random_word().await?;
 
@@ -72,6 +77,8 @@ impl Core {
         chain: Vec<String>,
         count: u32,
     ) -> Result<Vec<String>, CoreError> {
+        counter!("chain_word_num_call").increment(1);
+        gauge!("chain_word_count").set(count);
         let random_word = self.select_random_word().await?;
 
         info!(

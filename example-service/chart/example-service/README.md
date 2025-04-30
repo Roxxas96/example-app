@@ -27,6 +27,10 @@ Helm chart to deploy the example-service rust application
 | ingress.hosts | list | `[{"host":"chart-example.local","paths":[{"path":"/","pathType":"ImplementationSpecific"}]}]` | Hosts that will be served by the ingress |
 | ingress.tls | list | `[]` | TLS configuration for the ingress |
 | livenessProbe | object | `{"httpGet":{"path":"/health","port":"http"}}` | This is to set up the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ |
+| metrics.enabled | bool | `true` | Enable/Disable metrics service endpoint |
+| metrics.endpoint | string | `"/metrics"` | Set the metrics endpoint that prometheus will scrape |
+| metrics.port | int | `9001` | This sets the metrics ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports |
+| metrics.serviceMonitor.enabled | bool | `true` | Enable/Disable creation of a prometheus serviceMonitor |
 | nameOverride | string | `""` | This is to override the chart name. |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` | This is for setting Kubernetes Annotations to a Pod. For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ |
