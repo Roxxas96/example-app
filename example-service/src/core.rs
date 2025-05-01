@@ -1,19 +1,16 @@
-use crate::stores::hashmap::HashmapStoreError::WrongIndexGeneration;
-use crate::{
-    clients::grpc::{GrpcClient, GrpcClientError},
-    stores::hashmap::{HashmapStore, HashmapStoreError},
-};
+use crate::clients::grpc::{GrpcClient, GrpcClientError};
+use crate::stores::{Store, StoreError};
 use metrics::{counter, gauge};
 use rand::random_range;
-use std::sync::Arc;
+use std::error::Error;
+use std::fmt::Debug;
 use thiserror::Error;
-use tokio::sync::RwLock;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[derive(Error, Debug)]
-pub enum CoreError {
+pub enum CoreError<SE: Error> {
     #[error("Hashmap store error")]
-    HashmapStoreError(#[source] HashmapStoreError),
+    StoreError(#[source] StoreError<SE>),
     #[error("Word {0} not found")]
     NotFound(String),
     #[error("Word {0} already exists")]
@@ -29,65 +26,69 @@ pub enum CoreError {
 }
 
 #[derive(Clone)]
-pub struct Core {
-    store: Arc<RwLock<HashmapStore>>,
+pub struct Core<S: Store> {
+    store: S,
     connected_services: Vec<String>,
 }
 
-impl Core {
-    pub fn new(hashmap_store: Arc<RwLock<HashmapStore>>, connected_services: Vec<String>) -> Self {
+impl<S: Store> Core<S> {
+    pub fn new(store: S, connected_services: Vec<String>) -> Self {
         Core {
-            store: hashmap_store,
+            store,
             connected_services,
         }
     }
 
-    pub async fn get_word(&self, word: String) -> Result<String, CoreError> {
+    pub async fn get_word(&self, word: String) -> Result<String, CoreError<S::E>> {
         info!("Getting word {0}...", word);
         counter!("get_word_num_call").increment(1);
+
         Ok(self
             .store
-            .read()
-            .await
-            .get_word(word)
+            .get_word(word.clone())
             .await
             .map_err(|err| match err {
-                HashmapStoreError::NotFound(word) => CoreError::NotFound(word),
-                _ => CoreError::HashmapStoreError(err),
+                StoreError::NotFound(word) => CoreError::NotFound(word),
+                _ => {
+                    error!("Unanticipated error getting word {:0}: {:?}", word, err);
+                    CoreError::StoreError(err)
+                }
             })?)
     }
 
-    pub async fn add_word(&mut self, word: String) -> Result<(), CoreError> {
+    pub async fn add_word(&mut self, word: String) -> Result<(), CoreError<S::E>> {
         info!("Adding word {0}...", word);
         counter!("add_word_num_call").increment(1);
         Ok(self
             .store
-            .write()
-            .await
-            .add_word(word)
+            .add_word(word.clone())
             .await
             .map_err(|err| match err {
-                HashmapStoreError::AlreadyExists(word) => CoreError::AlreadyExists(word),
-                _ => CoreError::HashmapStoreError(err),
+                StoreError::AlreadyExists(word) => CoreError::AlreadyExists(word),
+                _ => {
+                    error!("Unanticipated error adding word {:0}: {:?}", word, err);
+                    CoreError::StoreError(err)
+                }
             })?)
     }
 
-    pub async fn delete_word(&mut self, word: String) -> Result<(), CoreError> {
+    pub async fn delete_word(&mut self, word: String) -> Result<(), CoreError<S::E>> {
         info!("Deleting word {0}...", word);
         counter!("delete_word_num_call").increment(1);
         Ok(self
             .store
-            .write()
-            .await
-            .remove_word(word)
+            .remove_word(word.clone())
             .await
             .map_err(|err| match err {
-                HashmapStoreError::NotFound(word) => CoreError::NotFound(word),
-                _ => CoreError::HashmapStoreError(err),
+                StoreError::NotFound(word) => CoreError::NotFound(word),
+                _ => {
+                    error!("Unanticipated error deleting word {:0}: {:?}", word, err);
+                    CoreError::StoreError(err)
+                }
             })?)
     }
 
-    pub async fn random_word(&self) -> Result<String, CoreError> {
+    pub async fn random_word(&self) -> Result<String, CoreError<S::E>> {
         info!("Getting random word...");
         counter!("random_word_num_call").increment(1);
 
@@ -98,7 +99,11 @@ impl Core {
         Ok(random_word)
     }
 
-    pub async fn chain(&self, chain: Vec<String>, count: u32) -> Result<Vec<String>, CoreError> {
+    pub async fn chain(
+        &self,
+        chain: Vec<String>,
+        count: u32,
+    ) -> Result<Vec<String>, CoreError<S::E>> {
         counter!("chain_word_num_call").increment(1);
         gauge!("chain_word_count").set(count);
         let random_word = self.select_random_word().await?;
@@ -113,6 +118,7 @@ impl Core {
 
         if count > 0 {
             if self.connected_services.is_empty() {
+                warn!("Chain was called because no services connected!");
                 return Err(CoreError::NoConnectedServices);
             } else {
                 new_chain = self.chain_with_random_service(new_chain, count).await?;
@@ -122,20 +128,17 @@ impl Core {
         Ok(new_chain)
     }
 
-    async fn select_random_word(&self) -> Result<String, CoreError> {
+    async fn select_random_word(&self) -> Result<String, CoreError<S::E>> {
         Ok(self
             .store
-            .read()
-            .await
-            .random_word()
+            .get_random_word()
             .await
             .map_err(|err| match err {
-                WrongIndexGeneration => {
-                    error!("Error during selection of random word: {:?}", err);
-                    CoreError::HashmapStoreError(err)
+                StoreError::Empty => CoreError::Empty,
+                _ => {
+                    error!("Unanticipated error getting random word: {:?}", err);
+                    CoreError::StoreError(err)
                 }
-                HashmapStoreError::Empty => CoreError::Empty,
-                _ => CoreError::HashmapStoreError(err),
             })?)
     }
 
@@ -143,38 +146,28 @@ impl Core {
         &self,
         chain: Vec<String>,
         count: u32,
-    ) -> Result<Vec<String>, CoreError> {
+    ) -> Result<Vec<String>, CoreError<S::E>> {
         let random_service = self
             .connected_services
             .get(random_range(0..self.connected_services.len()))
             .ok_or(CoreError::IndexError)
-            .map_err(|err| match err {
-                _ => {
-                    error!("Error picking random service in list: {:?}", err);
-                    CoreError::IndexError
-                }
+            .map_err(|err: CoreError<S::E>| {
+                error!("Error picking random service in list: {:?}", err);
+                CoreError::IndexError
             })?;
 
         info!("Chaining with client: {:?}", random_service);
 
-        let mut client =
-            GrpcClient::new(random_service.to_string())
-                .await
-                .map_err(|err| match err {
-                    _ => {
-                        error!("Error connecting to client {:?}: {:?}", random_service, err);
-                        CoreError::GrpcClientError(err)
-                    }
-                })?;
-
-        Ok(client
-            .chain(chain, count - 1)
+        let mut client = GrpcClient::new(random_service.to_string())
             .await
-            .map_err(|err| match err {
-                _ => {
-                    error!("Error chaining to client {:?}: {:?}", random_service, err);
-                    CoreError::GrpcClientError(err)
-                }
-            })?)
+            .map_err(|err| {
+                error!("Error connecting to client {:?}: {:?}", random_service, err);
+                CoreError::GrpcClientError(err)
+            })?;
+
+        Ok(client.chain(chain, count - 1).await.map_err(|err| {
+            error!("Error chaining to client {:?}: {:?}", random_service, err);
+            CoreError::GrpcClientError(err)
+        })?)
     }
 }

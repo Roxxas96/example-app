@@ -86,12 +86,11 @@ async fn main() -> Result<(), ExampleAppError> {
         .map_err(ExampleAppError::PrometheusError)?;
 
     info!("Building hashmap store...");
-    let hashmap_store = HashmapStore::new().map_err(ExampleAppError::HashmapStoreError)?;
+    let hashmap_store = HashmapStore::new()
+        .await
+        .map_err(ExampleAppError::HashmapStoreError)?;
 
-    let core = Core::new(
-        Arc::new(RwLock::new(hashmap_store)),
-        config.connected_services,
-    );
+    let core = Core::new(hashmap_store, config.connected_services);
 
     let http_interface = HttpInterface::new(core.clone());
     let http_server = http_interface.start_app(config.http_port).await;

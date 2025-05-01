@@ -1,4 +1,6 @@
 use crate::core::{Core, CoreError};
+use crate::stores::Store;
+use std::error::Error;
 use std::net::SocketAddr;
 use thiserror::Error;
 use tonic::{Request, Response, Status};
@@ -34,18 +36,18 @@ impl Into<Status> for GrpcInterfaceError {
     }
 }
 
-pub struct GrpcInterface {
-    core: Core,
+pub struct GrpcInterface<S: Store> {
+    core: Core<S>,
 }
 
-impl GrpcInterface {
-    pub fn new(core: Core) -> Self {
+impl<S: Store> GrpcInterface<S> {
+    pub fn new(core: Core<S>) -> Self {
         GrpcInterface { core }
     }
 }
 
 #[tonic::async_trait]
-impl WordService for GrpcInterface {
+impl<S: Store> WordService for GrpcInterface<S> {
     async fn chain(
         &self,
         request: Request<ChainRequest>,

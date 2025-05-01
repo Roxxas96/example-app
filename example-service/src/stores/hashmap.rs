@@ -1,90 +1,117 @@
+use crate::stores::{Store, StoreError};
+use rand::{rng, Rng};
 use std::collections::HashMap;
-
-use rand::Rng;
+use std::sync::Arc;
 use thiserror::Error;
+use tokio::sync::RwLock;
+use tonic::async_trait;
 use tracing::trace;
 
 #[derive(Error, Debug)]
 pub enum HashmapStoreError {
-    #[error("Word {0} not found")]
-    NotFound(String),
-    #[error("Word {0} already exists")]
-    AlreadyExists(String),
-    #[error("Store is empty")]
-    Empty,
     #[error("Wrong index generation during random picking")]
     WrongIndexGeneration,
 }
 
+#[derive(Clone)]
 pub struct HashmapStore {
-    pub word_store: HashMap<String, String>,
+    pub word_store: Arc<RwLock<HashMap<String, String>>>,
 }
 
 impl HashmapStore {
-    pub fn new() -> Result<HashmapStore, HashmapStoreError> {
-        let mut initial_store: HashMap<String, String> = HashMap::new();
+    pub async fn new() -> Result<HashmapStore, HashmapStoreError> {
+        let initial_store = Arc::new(RwLock::new(HashMap::new()));
 
-        initial_store.insert("hello".to_string(), "hello".to_string());
-        initial_store.insert("world".to_string(), "world".to_string());
-        initial_store.insert("how".to_string(), "how".to_string());
-        initial_store.insert("are".to_string(), "are".to_string());
-        initial_store.insert("you".to_string(), "you".to_string());
-        initial_store.insert("?".to_string(), "?".to_string());
+        initial_store
+            .write()
+            .await
+            .insert("hello".to_string(), "hello".to_string());
+        initial_store
+            .write()
+            .await
+            .insert("world".to_string(), "world".to_string());
+        initial_store
+            .write()
+            .await
+            .insert("how".to_string(), "how".to_string());
+        initial_store
+            .write()
+            .await
+            .insert("are".to_string(), "are".to_string());
+        initial_store
+            .write()
+            .await
+            .insert("you".to_string(), "you".to_string());
+        initial_store
+            .write()
+            .await
+            .insert("?".to_string(), "?".to_string());
 
         Ok(HashmapStore {
             word_store: initial_store,
         })
     }
+}
 
-    pub async fn get_word(&self, word: String) -> Result<String, HashmapStoreError> {
+#[async_trait]
+impl Store for HashmapStore {
+    type E = HashmapStoreError;
+
+    async fn get_word(&self, word: String) -> Result<String, StoreError<HashmapStoreError>> {
         trace!("Getting word {:?} from hashmap store...", word);
 
         Ok(self
             .word_store
+            .read()
+            .await
             .get(&word)
-            .ok_or(HashmapStoreError::NotFound(word))?
+            .ok_or(StoreError::NotFound(word))?
             .to_string())
     }
 
-    pub async fn add_word(&mut self, word: String) -> Result<(), HashmapStoreError> {
-        trace!("Adding word {:?} to hashmap store...", word);
-
-        if self.word_store.get(&word).is_some() {
-            return Err(HashmapStoreError::AlreadyExists(word));
-        }
-
-        self.word_store.insert(word.clone(), word);
-
-        Ok(())
-    }
-
-    pub async fn remove_word(&mut self, word: String) -> Result<(), HashmapStoreError> {
-        trace!("Removing word {:?} from hashmap store...", word);
-
-        if self.word_store.get(&word).is_none() {
-            return Err(HashmapStoreError::NotFound(word));
-        }
-
-        self.word_store.remove(&word);
-
-        Ok(())
-    }
-
-    pub async fn random_word(&self) -> Result<String, HashmapStoreError> {
+    async fn get_random_word(&self) -> Result<String, StoreError<HashmapStoreError>> {
         trace!("Getting a random word from hashmap store...");
 
-        if self.word_store.is_empty() {
-            return Err(HashmapStoreError::Empty);
+        if self.word_store.read().await.is_empty() {
+            return Err(StoreError::Empty);
         }
 
-        let mut rng = rand::rng();
-        let index = rng.random_range(0..self.word_store.len());
+        let keys: Vec<_> = self.word_store.read().await.keys().cloned().collect();
+        let index = rand::rng().random_range(0..keys.len());
 
         Ok(self
             .word_store
+            .read()
+            .await
             .keys()
             .nth(index)
-            .ok_or(HashmapStoreError::WrongIndexGeneration)?
+            .ok_or(StoreError::InternalStoreError(
+                HashmapStoreError::WrongIndexGeneration,
+            ))?
             .to_string())
+    }
+
+    async fn add_word(&mut self, word: String) -> Result<(), StoreError<HashmapStoreError>> {
+        trace!("Adding word {:?} to hashmap store...", word);
+
+        if self.word_store.read().await.get(&word).is_some() {
+            return Err(StoreError::AlreadyExists(word));
+        }
+
+        self.word_store.write().await.insert(word.clone(), word);
+
+        Ok(())
+    }
+
+    async fn remove_word(&mut self, word: String) -> Result<(), StoreError<HashmapStoreError>> {
+        trace!("Removing word {:?} from hashmap store...", word);
+
+        if self.word_store.read().await.get(&word).is_none() {
+            return Err(StoreError::NotFound(word));
+        }
+
+        self.word_store.write().await.remove(&word);
+
+        Ok(())
     }
 }

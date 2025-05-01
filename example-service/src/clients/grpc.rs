@@ -3,7 +3,7 @@ use std::time::Duration;
 use async_recursion::async_recursion;
 use thiserror::Error;
 use tonic::transport::Channel;
-use tracing::trace;
+use tracing::{trace, warn};
 use word::{word_service_client::WordServiceClient, ChainRequest};
 
 pub mod word {
@@ -71,7 +71,7 @@ async fn connect_to_client(
         Ok(client) => Ok(client),
         Err(e) => {
             if retries > 0 {
-                tracing::warn!("Failed to connect to the server: {0}. Retrying...", e);
+                warn!("Failed to connect to the server: {0}. Retrying...", e);
                 tokio::time::sleep(Duration::from_secs(5)).await;
                 connect_to_client(service_url, retries - 1).await
             } else {
