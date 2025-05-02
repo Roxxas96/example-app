@@ -149,7 +149,6 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
         State(state): State<Core<S, C>>,
     ) -> Result<(StatusCode, Json<RandomWordResponse>), (StatusCode, String)> {
         trace!("Received random_word request");
-        tokio::time::sleep(Duration::from_secs(5)).await;
         state
             .random_word()
             .await
