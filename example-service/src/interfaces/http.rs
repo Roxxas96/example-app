@@ -70,23 +70,21 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
         HttpInterface { core }
     }
 
-    pub async fn start_app(&self, port: u16) -> JoinHandle<Result<(), HttpInterfaceError>> {
+    pub async fn start_app(&self, port: u16) -> Result<(), HttpInterfaceError> {
         let app = self.create_app();
 
-        tokio::spawn(async move {
-            let address = format!("0.0.0.0:{0}", port);
-            let listener = tokio::net::TcpListener::bind(address.clone())
-                .await
-                .map_err(|e| HttpInterfaceError::TcpListenerCreation {
-                    source: e,
-                    address: address.clone(),
-                })?;
+        let address = format!("0.0.0.0:{0}", port);
+        let listener = tokio::net::TcpListener::bind(address.clone())
+            .await
+            .map_err(|e| HttpInterfaceError::TcpListenerCreation {
+                source: e,
+                address: address.clone(),
+            })?;
 
-            info!("Starting http interface on address {0}...", address);
-            axum::serve(listener, app)
-                .await
-                .map_err(|e| HttpInterfaceError::AxumServe { source: e, address })
-        })
+        info!("Starting http interface on address {0}...", address);
+        axum::serve(listener, app)
+            .await
+            .map_err(|e| HttpInterfaceError::AxumServe { source: e, address })
     }
 
     fn create_app(&self) -> Router {
