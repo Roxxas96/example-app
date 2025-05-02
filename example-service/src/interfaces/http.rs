@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::time::Duration;
 
+use crate::clients::Client;
 use crate::core::{Core, CoreError};
 use crate::stores::Store;
 use axum::{
@@ -60,12 +61,12 @@ impl Into<(StatusCode, String)> for HttpInterfaceError {
     }
 }
 
-pub struct HttpInterface<S: Store> {
-    core: Core<S>,
+pub struct HttpInterface<S: Store, C: Client> {
+    core: Core<S, C>,
 }
 
-impl<S: Store> HttpInterface<S> {
-    pub fn new(core: Core<S>) -> Self {
+impl<S: Store, C: Client> HttpInterface<S, C> {
+    pub fn new(core: Core<S, C>) -> Self {
         HttpInterface { core }
     }
 
@@ -101,7 +102,7 @@ impl<S: Store> HttpInterface<S> {
     }
 
     async fn add_word(
-        State(mut state): State<Core<S>>,
+        State(mut state): State<Core<S, C>>,
         Json(payload): Json<AddWordRequest>,
     ) -> Result<StatusCode, (StatusCode, String)> {
         trace!("Received add_word request for word: {}", payload.word);
@@ -116,7 +117,7 @@ impl<S: Store> HttpInterface<S> {
     }
 
     async fn get_word(
-        State(state): State<Core<S>>,
+        State(state): State<Core<S, C>>,
         Path(word): Path<String>,
     ) -> Result<(StatusCode, Json<GetWordResponse>), (StatusCode, String)> {
         trace!("Received get_word request for word: {}", word);
@@ -131,7 +132,7 @@ impl<S: Store> HttpInterface<S> {
     }
 
     async fn remove_word(
-        State(mut state): State<Core<S>>,
+        State(mut state): State<Core<S, C>>,
         Json(payload): Json<RemoveWordRequest>,
     ) -> Result<StatusCode, (StatusCode, String)> {
         trace!("Received remove_word request for word: {}", payload.word);
@@ -149,7 +150,7 @@ impl<S: Store> HttpInterface<S> {
     }
 
     async fn random_word(
-        State(state): State<Core<S>>,
+        State(state): State<Core<S, C>>,
     ) -> Result<(StatusCode, Json<RandomWordResponse>), (StatusCode, String)> {
         trace!("Received random_word request");
         tokio::time::sleep(Duration::from_secs(5)).await;
@@ -166,7 +167,7 @@ impl<S: Store> HttpInterface<S> {
     }
 
     async fn start_chain(
-        State(state): State<Core<S>>,
+        State(state): State<Core<S, C>>,
         Json(payload): Json<ChainRequest>,
     ) -> Result<(StatusCode, Json<ChainResponse>), (StatusCode, String)> {
         trace!("Received chain request");

@@ -3,6 +3,7 @@ mod core;
 mod interfaces;
 mod stores;
 
+use crate::clients::grpc::{GrpcClient, GrpcClientError};
 use crate::core::Core;
 use config::{Config, ConfigError};
 use interfaces::{
@@ -15,9 +16,10 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::{net::AddrParseError, sync::Arc};
 use stores::hashmap::{HashmapStore, HashmapStoreError};
 use thiserror::Error;
+use tokio::task::JoinHandle;
 use tokio::{sync::RwLock, task::JoinError};
 use tonic::transport::Server;
-use tracing::info;
+use tracing::{debug, error, info};
 
 #[derive(Error, Debug)]
 enum ExampleAppError {
@@ -35,6 +37,8 @@ enum ExampleAppError {
     HttpServerError(#[source] HttpInterfaceError),
     #[error("gRPC server error")]
     GrpcServerError(#[source] GrpcInterfaceError),
+    #[error("gRPC client error")]
+    GrpcClientError(#[source] GrpcClientError),
     #[error("Join error")]
     JoinHandleError(#[source] JoinError),
     #[error("Error with Prometheus interface")]
@@ -90,10 +94,30 @@ async fn main() -> Result<(), ExampleAppError> {
         .await
         .map_err(ExampleAppError::HashmapStoreError)?;
 
-    let core = Core::new(hashmap_store, config.connected_services);
+    info!("Building gRPC clients...");
+    let grpc_clients = Arc::new(RwLock::new(Vec::new()));
+    let grpc_clients_task = tokio::spawn({
+        let grpc_clients = grpc_clients.clone();
+        async move {
+            for service_url in config.connected_services {
+                let client = match GrpcClient::new(service_url.clone()).await {
+                    Ok(client) => client,
+                    Err(err) => {
+                        error!("Error creating gRPC client: {err}");
+                        return Err(err);
+                    }
+                };
+                grpc_clients.write().await.push(client);
+                debug!("Connected gRPC client to {:?}", service_url);
+            }
+            Ok(())
+        }
+    });
+
+    let core = Core::new(hashmap_store, grpc_clients);
 
     let http_interface = HttpInterface::new(core.clone());
-    let http_server = http_interface.start_app(config.http_port).await;
+    let http_server_task = http_interface.start_app(config.http_port).await;
 
     let grpc_interface = GrpcInterface::new(core);
     let grpc_url = format!("0.0.0.0:{0}", config.grpc_port)
@@ -102,7 +126,7 @@ async fn main() -> Result<(), ExampleAppError> {
             source: e,
             port: config.grpc_port,
         })?;
-    let grpc_server = tokio::spawn(async move {
+    let grpc_server_task = tokio::spawn(async move {
         info!("Starting gRPC interface on address {0}...", grpc_url);
         Server::builder()
             .add_service(WordServiceServer::new(grpc_interface))
@@ -114,16 +138,18 @@ async fn main() -> Result<(), ExampleAppError> {
             })
     });
 
-    let join_handle = tokio::join!(http_server, grpc_server);
+    let (http_server_task_result, grpc_server_task_result, grpc_clients_task_result) =
+        tokio::join!(http_server_task, grpc_server_task, grpc_clients_task);
 
-    join_handle
-        .0
+    http_server_task_result
         .map_err(ExampleAppError::JoinHandleError)?
         .map_err(ExampleAppError::HttpServerError)?;
-    join_handle
-        .1
+    grpc_server_task_result
         .map_err(ExampleAppError::JoinHandleError)?
         .map_err(ExampleAppError::GrpcServerError)?;
+    grpc_clients_task_result
+        .map_err(ExampleAppError::JoinHandleError)?
+        .map_err(ExampleAppError::GrpcClientError)?;
 
     Ok(())
 }
