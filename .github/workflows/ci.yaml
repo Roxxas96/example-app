@@ -13,6 +13,47 @@ env:
   HELM_USERNAME: robot$example-app-helm+github
 
 jobs:
+  chart-test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        run: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@v2
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+
+      - name: Export kind config
+        run: kind export kubeconfig --name chart-testing
+
+      - name: Deploy test infrastructure
+        run: |
+          cd infra/test
+          export TF_VAR_harbor_docker_username="${{ env.DOCKER_USERNAME }}"
+          export TF_VAR_harbor_docker_password="${{ secrets.DOCKER_PASSWORD }}"
+          terraform init
+          terraform apply --auto-approve
+          cd ../..
+
+      - name: Run chart-testing (install)
+        run: ct lint-and-install
+
   pre-commits:
     runs-on: ubuntu-latest
 
