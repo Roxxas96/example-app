@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::time::Duration;
 
 use crate::clients::Client;
@@ -12,7 +11,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tokio::task::JoinHandle;
 use tower_http::trace::TraceLayer;
 use tracing::{info, trace, warn};
 

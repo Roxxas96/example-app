@@ -1,5 +1,5 @@
 use crate::stores::{Store, StoreError};
-use rand::{rng, Rng};
+use rand::Rng;
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;

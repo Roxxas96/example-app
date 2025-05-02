@@ -1,7 +1,6 @@
 use crate::clients::Client;
 use crate::core::{Core, CoreError};
 use crate::stores::Store;
-use std::error::Error;
 use std::net::SocketAddr;
 use thiserror::Error;
 use tonic::{Request, Response, Status};
