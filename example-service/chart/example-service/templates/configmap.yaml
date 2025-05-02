@@ -6,11 +6,13 @@ metadata:
     {{- include "example-service.labels" . | nindent 4 }}
 data:
   {{- with .Values.config }}
-    RUST_LOG: {{ .logLevel | quote }}
+  RUST_LOG: {{ .logLevel | quote }}
     {{- if .backtrace }}
-    RUST_BACKTRACE: "1"
+  RUST_BACKTRACE: "1"
     {{- else }}
-    RUST_BACKTRACE: "0"
+  RUST_BACKTRACE: "0"
     {{- end }}
-    CONNECTED_SERVICES: {{ .connectedServices | join "," | quote }}
+    {{- if .connectedServices }}
+  CONNECTED_SERVICES: {{ .connectedServices | join "," | quote }}
+    {{- end }}
   {{- end }}
