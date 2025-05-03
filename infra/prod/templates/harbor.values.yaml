@@ -14,3 +14,11 @@ metrics:
   enabled: true
   serviceMonitor:
     enabled: true
+
+registry:
+  updateStrategy:
+    type: Recreate
+
+jobservice:
+  updateStrategy:
+    type: Recreate
