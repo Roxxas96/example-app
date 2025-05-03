@@ -1,0 +1,9 @@
+scrape_configs:
+  - job_name: "example-service"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["service-1:9001"]
+      - targets: ["service-2:9001"]
+      - targets: ["service-3:9001"]
+      - targets: ["service-4:9001"]
+      - targets: ["service-5:9001"]
