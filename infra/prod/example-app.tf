@@ -38,7 +38,7 @@ resource "kubernetes_secret_v1" "harbor_credentials" {
 variable "num_services" {
   description = "Number of services to be deployed"
   type        = number
-  default     = 3
+  default     = 5
 }
 
 resource "kubernetes_manifest" "application_example_service" {

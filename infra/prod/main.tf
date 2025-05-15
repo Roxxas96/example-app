@@ -19,7 +19,6 @@ resource "kubernetes_manifest" "app_project_example_app" {
     }
     spec = {
       description = "Project containing all home infra applications"
-      // TODO: add harbor here
       sourceRepos = ["*"]
       destinations = [
         {
