@@ -68,6 +68,11 @@ resource "kubernetes_manifest" "application_example_service" {
         server    = "https://kubernetes.default.svc"
         namespace = kubernetes_namespace_v1.example_app.metadata[0].name
       }
+      syncPolicy = {
+        automated = {
+          enabled = true
+        }
+      }
     }
   }
 }
