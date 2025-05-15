@@ -26,7 +26,7 @@ resource "kubernetes_secret_v1" "harbor_credentials" {
     ".dockerconfigjson" = <<EOF
       {
         "auths": {
-          "harbor.internal.roxxas96.net": {
+          "harbor.roxxas96.net": {
             "auth": "${base64encode("${var.harbor_docker_username}:${var.harbor_docker_password}")}"
           }
         }

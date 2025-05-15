@@ -1,6 +1,6 @@
 # example-service
 
-![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0-rc49](https://img.shields.io/badge/AppVersion-0.1.0--rc49-informational?style=flat-square)
+![Version: 0.1.7](https://img.shields.io/badge/Version-0.1.7-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0-rc53](https://img.shields.io/badge/AppVersion-0.1.0--rc53-informational?style=flat-square)
 
 Helm chart to deploy the example-service rust application
 
@@ -24,7 +24,7 @@ Helm chart to deploy the example-service rust application
 | config.logLevel | string | `"info"` | Log level of the application |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` | This sets the pull policy for images. |
-| image.repository | string | `"harbor.internal.roxxas96.net/example-app/example-service"` |  |
+| image.repository | string | `"harbor.roxxas96.net/example-app/example-service"` |  |
 | image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion. |
 | imagePullSecrets | list | `[{"name":"harbor-credentials"}]` | This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/ |
 | ingress.annotations | object | `{}` | Annotations that will be added to the ingress resource |
