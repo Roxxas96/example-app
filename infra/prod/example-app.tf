@@ -55,7 +55,7 @@ resource "kubernetes_manifest" "application_example_service" {
     spec = {
       project = kubernetes_manifest.app_project_example_app.manifest.metadata.name
       source = {
-        repoURL        = "harbor.internal.${data.cloudflare_zone.roxxas96_dot_net.name}"
+        repoURL        = "harbor.${data.cloudflare_zone.roxxas96_dot_net.name}"
         targetRevision = "*.*.*"
         chart          = "example-app-helm/example-service"
         helm = {
