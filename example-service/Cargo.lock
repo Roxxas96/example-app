@@ -533,7 +533,7 @@ dependencies = [
 
 [[package]]
 name = "example-service"
-version = "0.1.0-rc59"
+version = "0.1.0-rc61"
 dependencies = [
  "async-recursion",
  "axum 0.8.4",
