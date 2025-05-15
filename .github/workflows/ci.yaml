@@ -107,6 +107,12 @@ jobs:
         with:
           versionSpec: "5.x"
 
+      - name: Install helm-docs
+        run: |
+          wget https://github.com/norwoodj/helm-docs/releases/download/v1.14.2/helm-docs_1.14.2_Linux_x86_64.tar.gz
+          tar xzf helm-docs_1.14.2_Linux_x86_64.tar.gz
+          mv helm-docs /usr/local/bin/
+
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v3
@@ -129,6 +135,7 @@ jobs:
           sed -i '/name = "example-service"/{n;s/version = ".*"/version = "${{ steps.formatVersion.outputs.appVersion }}"/}' example-service/Cargo.lock
           sed -i 's/^appVersion: .*/appVersion: "${{ steps.formatVersion.outputs.appVersion }}"/' example-service/chart/example-service/Chart.yaml
           sed -i 's/^version: .*/version: "${{ steps.formatVersion.outputs.chartVersion }}"/' example-service/chart/example-service/Chart.yaml
+          helm-docs
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -138,6 +145,7 @@ jobs:
             example-service/Cargo.toml
             example-service/Cargo.lock
             example-service/chart/example-service/Chart.yaml
+            example-service/chart/example-service/README.md
 
   docker-build-push:
     runs-on: ubuntu-latest
@@ -161,6 +169,7 @@ jobs:
           rm -f example-service/Cargo.toml
           rm -f example-service/Cargo.lock
           rm -f example-service/chart/example-service/Chart.yaml
+          rm -f example-service/chart/example-service/README.md
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -240,6 +249,7 @@ jobs:
           rm -f example-service/Cargo.toml
           rm -f example-service/Cargo.lock
           rm -f example-service/chart/example-service/Chart.yaml
+          rm -f example-service/chart/example-service/README.md
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -299,6 +309,7 @@ jobs:
           rm -f example-service/Cargo.toml
           rm -f example-service/Cargo.lock
           rm -f example-service/chart/example-service/Chart.yaml
+          rm -f example-service/chart/example-service/README.md
 
       - name: Download artifact
         uses: actions/download-artifact@v4
