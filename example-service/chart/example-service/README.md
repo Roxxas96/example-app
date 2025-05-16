@@ -41,13 +41,12 @@ Helm chart to deploy the example-service rust application
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` | This is for setting Kubernetes Annotations to a Pod. For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ |
 | podLabels | object | `{}` | This is for setting Kubernetes Labels to a Pod. For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/ |
-| podSecurityContext | object | `{}` |  |
+| podSecurityContext.fsGroup | int | `10001` |  |
 | readinessProbe.httpGet.path | string | `"/health"` |  |
 | readinessProbe.httpGet.port | string | `"http"` |  |
 | replicaCount | int | `1` | This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/ |
 | resources | object | `{}` |  |
 | securityContext.capabilities.drop[0] | string | `"ALL"` |  |
-| securityContext.fsGroup | int | `10001` |  |
 | securityContext.readOnlyRootFilesystem | bool | `true` |  |
 | securityContext.runAsGroup | int | `10001` |  |
 | securityContext.runAsNonRoot | bool | `true` |  |
