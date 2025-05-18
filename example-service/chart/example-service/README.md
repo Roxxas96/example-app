@@ -1,6 +1,6 @@
 # example-service
 
-![Version: 0.1.13](https://img.shields.io/badge/Version-0.1.13-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0-rc65](https://img.shields.io/badge/AppVersion-0.1.0--rc65-informational?style=flat-square)
+![Version: 0.1.14](https://img.shields.io/badge/Version-0.1.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.1.0-rc69](https://img.shields.io/badge/AppVersion-0.1.0--rc69-informational?style=flat-square)
 
 Helm chart to deploy the example-service rust application
 
