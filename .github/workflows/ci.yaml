@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: [main]
     tags: ["*.*.*"]
   pull_request:
 
@@ -90,7 +90,7 @@ jobs:
       contents: read
 
     concurrency:
-      group: "bump-version"
+      group: bump-version
       cancel-in-progress: false
 
     outputs:
@@ -105,7 +105,7 @@ jobs:
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3
         with:
-          versionSpec: "5.x"
+          versionSpec: 5.x
 
       - name: Install helm-docs
         run: |
@@ -158,7 +158,7 @@ jobs:
       id-token: write
 
     concurrency:
-      group: "docker-build-push"
+      group: docker-build-push
       cancel-in-progress: false
 
     steps:
@@ -239,7 +239,7 @@ jobs:
       id-token: write
 
     concurrency:
-      group: "helm-publish"
+      group: helm-publish
       cancel-in-progress: false
 
     steps:
@@ -294,7 +294,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     concurrency:
-      group: "commit-version"
+      group: commit-version
       cancel-in-progress: false
 
     permissions:
@@ -322,5 +322,5 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: [skip ci] bump example-service version to ${{ needs.bump-version.outputs.appVersion }}"
-          commit_options: "-a"
+          commit_options: -a
           commit_author: github-actions[bot] <github-actions[bot]@users.noreply.github.com>

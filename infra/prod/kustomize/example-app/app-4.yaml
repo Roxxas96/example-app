@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example-service-4
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: example-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: example-app
+  syncPolicy:
+    automated:
+      enabled: true
+  source:
+    repoURL: harbor.roxxas96.net
+    targetRevision: "*.*.*"
+    chart: example-app-helm/example-service
+    helm:
+      values: |
+        config:
+          connectedServices: http://example-service-1:50051,http://example-service-2:50051,http://example-service-3:50051,http://example-service-5:50051

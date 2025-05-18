@@ -5,9 +5,9 @@ services:
       target: final
     image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - "3001:3001"
-      - "50051:50051"
-      - "9001:9001"
+      - 3001:3001
+      - 50051:50051
+      - 9001:9001
     environment:
       - CONNECTED_SERVICES=grpc://service-2:50051,grpc://service-3:50051,grpc://service-4:50051,grpc://service-5:50051
       - RUST_LOG=${RUST_LOG:-info}
@@ -24,9 +24,9 @@ services:
       target: final
     image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - "3002:3001"
-      - "50052:50051"
-      - "9002:9001"
+      - 3002:3001
+      - 50052:50051
+      - 9002:9001
     environment:
       - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-3:50051,grpc://service-4:50051,grpc://service-5:50051
       - RUST_LOG=${RUST_LOG:-info}
@@ -43,9 +43,9 @@ services:
       target: final
     image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - "3003:3001"
-      - "50053:50051"
-      - "9003:9001"
+      - 3003:3001
+      - 50053:50051
+      - 9003:9001
     environment:
       - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-2:50051,grpc://service-4:50051,grpc://service-5:50051
       - RUST_LOG=${RUST_LOG:-info}
@@ -62,9 +62,9 @@ services:
       target: final
     image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - "3004:3001"
-      - "50054:50051"
-      - "9004:9001"
+      - 3004:3001
+      - 50054:50051
+      - 9004:9001
     environment:
       - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-2:50051,grpc://service-3:50051,grpc://service-5:50051
       - RUST_LOG=${RUST_LOG:-info}
@@ -81,9 +81,9 @@ services:
       target: final
     image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
-      - "3005:3001"
-      - "50055:50051"
-      - "9005:9001"
+      - 3005:3001
+      - 50055:50051
+      - 9005:9001
     environment:
       - CONNECTED_SERVICES=grpc://service-1:50051,grpc://service-2:50051,grpc://service-3:50051,grpc://service-4:50051
       - RUST_LOG=${RUST_LOG:-info}
@@ -97,6 +97,6 @@ services:
   prometheus:
     image: bitnami/prometheus:2.5.0
     ports:
-      - "9090:9090"
+      - 9090:9090
     volumes:
       - ./prometheus.yaml:/opt/bitnami/prometheus/conf/prometheus.yml

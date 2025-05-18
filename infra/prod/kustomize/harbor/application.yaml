@@ -1,0 +1,91 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: example-app
+  ignoreDifferences:
+    - group: "*"
+      kind: Secret
+      name: harbor-core
+      jsonPointers:
+        - /data/secret
+        - /data/secretKey
+        - /data/tls.crt
+        - /data/tls.key
+    - group: "*"
+      kind: Deployment
+      name: harbor-core
+      jsonPointers:
+        - /spec/template/metadata/annotations/checksum~1secret-envvars
+        - /spec/template/metadata/annotations/checksum~1secret-jobservice
+        - /spec/template/metadata/annotations/checksum~1secret
+    - group: "*"
+      kind: Secret
+      name: harbor-core-envvars
+      jsonPointers:
+        - /data/CSRF_KEY
+        - /data/HARBOR_ADMIN_PASSWORD
+    - group: "*"
+      kind: Deployment
+      name: harbor-exporter
+      jsonPointers:
+        - /spec/template/metadata/annotations/checksum~1secret-core
+    - group: "*"
+      kind: Secret
+      name: harbor-jobservice
+      jsonPointers:
+        - /data/secret
+    - group: "*"
+      kind: Deployment
+      name: harbor-jobservice
+      jsonPointers:
+        - /spec/template/metadata/annotations/checksum~1secret-core
+        - /spec/template/metadata/annotations/checksum~1secret
+    - group: "*"
+      kind: Secret
+      name: harbor-registry
+      jsonPointers:
+        - /data/REGISTRY_HTTP_SECRET
+    - group: "*"
+      kind: Deployment
+      name: harbor-registry
+      jsonPointers:
+        - /spec/template/metadata/annotations/checksum~1secret-core
+        - /spec/template/metadata/annotations/checksum~1secret-jobservice
+        - /spec/template/metadata/annotations/checksum~1secret
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+  source:
+    repoURL: registry-1.docker.io/bitnamicharts
+    targetRevision: "*.*.*"
+    chart: harbor
+    helm:
+      values: |
+        externalURL: https://harbor.roxxas96.net
+
+        exposureType: ingress
+
+        ingress:
+          core:
+            ingressClassName: nginx
+            hostname: harbor.roxxas96.net
+            annotations:
+              cert-manager.io/cluster-issuer: external-prod
+            tls: true
+
+        metrics:
+          enabled: true
+          serviceMonitor:
+            enabled: true
+
+        registry:
+          updateStrategy:
+            type: Recreate
+
+        jobservice:
+          updateStrategy:
+            type: Recreate

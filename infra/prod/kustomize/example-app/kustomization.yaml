@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: example-app
+
+resources:
+  - docker-repo.sealedsecret.yaml
+  - app-1.yaml
+  - app-2.yaml
+  - app-3.yaml
+  - app-4.yaml
+  - app-5.yaml
