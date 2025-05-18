@@ -1,0 +1,12 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: example-app-gitops
+spec:
+  project: example-app
+  destination:
+    server: https://kubernetes.default.svc
+  source:
+    repoURL: git@github.com:Roxxas96/example-app.git
+    targetRevision: main
+    path: infra/prod/kustomize
