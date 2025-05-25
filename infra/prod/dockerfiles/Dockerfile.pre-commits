@@ -1,0 +1,97 @@
+# Stage 1: Build environment
+FROM python:3.13-alpine AS builder
+
+LABEL image="harbor.roxxas96.net/example-app/pre-commits"
+LABEL tag="0.1.0"
+LABEL maintainer="gomez.a.corneille@gmail.com"
+
+ARG PRE_COMMIT_VERSION=4.2.0
+ARG RUST_VERSION=1.84.0
+ARG PROTOC_VERSION=29.3
+ARG TERRAFORM_VERSION=1.12.0
+ARG TFLINT_VERSION=0.57.0
+ARG HELM_DOCS_VERSION=1.14.2
+ARG HCLEDIT_VERSION=0.2.17
+ARG TFUPDATE_VERSION=0.9.1
+
+RUN apk add --no-cache \
+    git \
+    curl \
+    unzip \
+    bash \
+    libgcc
+
+# Install pre-commit
+RUN pip install --upgrade pip && pip install pre-commit==${PRE_COMMIT_VERSION}
+
+# Install rustup and toolchain
+ENV CARGO_HOME=/usr/local/cargo
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV PATH=$CARGO_HOME/bin:$PATH
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-toolchain ${RUST_VERSION} && \
+    ln -s /usr/local/cargo/bin/* /usr/local/bin/ && \
+    $CARGO_HOME/bin/rustup default ${RUST_VERSION} && \
+    $CARGO_HOME/bin/rustup component add clippy
+
+# Install Terraform
+RUN curl -L https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip -o terraform.zip && \
+    unzip terraform.zip && mv terraform /usr/local/bin/ && rm terraform.zip
+
+# Install tflint
+RUN curl -L https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip -o tflint.zip && \
+    unzip tflint.zip && mv tflint /usr/local/bin/ && rm tflint.zip
+
+# Install helm-docs
+RUN curl -L https://github.com/norwoodj/helm-docs/releases/download/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.tar.gz | tar xz && \
+    mv helm-docs /usr/local/bin/
+
+# Install hcledit
+RUN curl -L https://github.com/minamijoyo/hcledit/releases/download/v${HCLEDIT_VERSION}/hcledit_${HCLEDIT_VERSION}_linux_amd64.tar.gz | tar xz && \
+    mv hcledit /usr/local/bin/
+
+# Install tfupdate
+RUN curl -L https://github.com/minamijoyo/tfupdate/releases/download/v${TFUPDATE_VERSION}/tfupdate_${TFUPDATE_VERSION}_linux_amd64.tar.gz | tar xz && \
+    mv tfupdate /usr/local/bin/
+
+# Install protoc
+RUN curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
+    unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && \
+    rm protoc-${PROTOC_VERSION}-linux-x86_64.zip
+
+# Stage 2: Minimal runtime
+FROM alpine:latest
+
+# Create non-root user
+RUN addgroup -S pre-commit && adduser -S pre-commit -G pre-commit
+
+# Set home for non-root user
+ENV HOME=/home/pre-commit
+RUN mkdir -p $HOME && chown pre-commit:pre-commit $HOME
+
+# (Optional but safe) Also explicitly set XDG_CACHE_HOME if needed
+ENV XDG_CACHE_HOME=$HOME/.cache
+
+# Install Git for hook dependencies
+RUN apk add --no-cache git bash build-base
+
+# Copy pre-commit and all tools from builder
+COPY --from=builder /usr/local /usr/local
+COPY --from=builder /usr/lib /usr/lib
+# Cargo and Rustup needs to edit files so we put them in home directory
+COPY --from=builder --chown=pre-commit:pre-commit /usr/local/rustup /home/pre-commit/.rustup
+COPY --from=builder --chown=pre-commit:pre-commit /usr/local/cargo /home/pre-commit/.cargo
+
+# Add rust to PATH
+ENV CARGO_HOME=/home/pre-commit/.cargo
+ENV RUSTUP_HOME=/home/pre-commit/.rustup
+ENV PATH=$CARGO_HOME/bin:$PATH
+
+# Use non-root user
+USER pre-commit
+
+# Set working directory
+WORKDIR /repo
+
+ENTRYPOINT ["pre-commit"]
+CMD ["run", "--all-files"]

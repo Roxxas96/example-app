@@ -1,0 +1,18 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: pre-commits
+spec:
+  description: Executes pre-commit checks on a repository.
+  workspaces:
+    - name: source
+  params:
+    - name: revision
+  steps:
+    - name: pre-commits
+      image: harbor.roxxas96.net/example-app/pre-commits:0.1.0
+      script: |
+        #!/bin/sh
+        git config --global --add safe.directory $(workspaces.source.path)
+        cd $(workspaces.source.path)
+        pre-commit run --from-ref origin/main --to-ref origin/$(params.revision) --show-diff-on-failure

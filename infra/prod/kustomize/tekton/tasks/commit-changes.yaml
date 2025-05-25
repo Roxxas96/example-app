@@ -1,0 +1,37 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: commit-changes
+spec:
+  description: Commit all changes made to the source directory.
+  workspaces:
+    - name: source
+    - name: ssh-directory
+      description: Git credentials to access the repository.
+  params:
+    - name: commit-message
+      description: The message that will be used for the commit.
+    - name: commit-username
+    - name: commit-email
+    - name: revision
+  steps:
+    - name: commit-changes
+      image: alpine:3.21.3
+      script: |
+        #!/bin/sh
+        cd $(workspaces.source.path)
+        apk add --no-cache git openssh
+
+        git config --global --add safe.directory $(workspaces.source.path)
+        git status
+
+        cp -R $(workspaces.ssh-directory.path) $HOME/.ssh
+        chmod 700 $HOME/.ssh
+        chmod -R 400 $HOME/.ssh/*
+
+        git config set user.name "$(params.commit-username)"
+        git config user.email "$(params.commit-email)"
+
+        git checkout $(params.revision)
+        git commit -a -m "$(params.commit-message)"
+        git push origin $(params.revision)
