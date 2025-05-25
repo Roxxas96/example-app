@@ -1,0 +1,36 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: example-app-on-push
+spec:
+  serviceAccountName: example-app-on-push-listener
+  triggers:
+    - bindings:
+        - ref: example-app-on-push-execute-ci
+      template:
+        ref: example-app-execute-ci
+      interceptors:
+        - ref:
+            name: github
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+            - name: secretRef
+              value:
+                secretName: github-secret
+                # trunk-ignore(checkov/CKV_SECRET_6)
+                secretKey: secretToken
+            - name: eventTypes
+              value: [push, pull_request]
+        - ref:
+            name: cel
+          params:
+            - name: filter
+              value: "!(body.head_commit != null && body.head_commit.message.matches('(?i).*\\\\[skip ci\\\\].*'))"
+            - name: overlays
+              value:
+                - key: ref
+                  expression: |
+                    has(body.pull_request) ? body.pull_request.head.ref : (
+                      body.ref.split('/').size() > 3 ? body.ref.split('/')[2] + '/' + body.ref.split('/')[3] : body.ref.split('/')[2]
+                    )

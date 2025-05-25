@@ -1,0 +1,27 @@
+# trunk-ignore(checkov/CKV_K8S_21)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: el-example-app-on-push
+  labels:
+    name: el-example-app-on-push
+  annotations:
+    external-dns.alpha.kubernetes.io/target: 95.90.150.138
+    cert-manager.io/cluster-issuer: external-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: tekton.roxxas96.net
+      http:
+        paths:
+          - pathType: Prefix
+            path: /example-app-on-push
+            backend:
+              service:
+                name: el-example-app-on-push
+                port:
+                  name: http-listener
+  tls:
+    - hosts:
+        - tekton.roxxas96.net
+      secretName: el-example-app-on-push-tls

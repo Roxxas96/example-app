@@ -1,0 +1,8 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: example-app-on-push-execute-ci
+spec:
+  params:
+    - name: git-revision
+      value: $(extensions.ref)
