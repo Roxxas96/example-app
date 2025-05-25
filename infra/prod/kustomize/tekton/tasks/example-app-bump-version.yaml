@@ -1,0 +1,79 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: example-app-bump-version
+spec:
+  description: Bump the version of the example-app repo.
+  workspaces:
+    - name: source
+  results:
+    - name: app-version
+      description: The bumped version of the application.
+    - name: chart-version
+      description: The bumped version of the application's chart.
+  steps:
+    - name: git-version
+      image: gittools/gitversion:6.3.0-alpine.3.20-9.0
+      script: |
+        #!/bin/sh
+        cd $(workspaces.source.path)
+        apk add --no-cache jq
+
+        /tools/dotnet-gitversion > /tmp/.gitversion.json
+        echo "Gitversion results"
+        cat /tmp/.gitversion.json
+
+        # Format version
+        if [ $(cat /tmp/.gitversion.json | jq -r '.CommitsSinceVersionSource') = 0 ]; then
+          APP_VERSION=$(cat /tmp/.gitversion.json | jq -r '.MajorMinorPatch')
+        else
+          APP_VERSION=$(cat /tmp/.gitversion.json | jq -r '.MajorMinorPatch')-rc$(cat /tmp/.gitversion.json | jq -r '.CommitsSinceVersionSource')
+        fi
+        echo "APP_VERSION=$APP_VERSION"
+        echo -n "$APP_VERSION" > $(results.app-version.path)
+
+    - name: bump-rust-app
+      image: alpine:3.21.3
+      script: |
+        #!/bin/sh
+        cd $(workspaces.source.path)
+
+        sed -i "s/^version = \".*\"/version = \"$(cat $(results.app-version.path))\"/" example-service/Cargo.toml
+        sed -i "/name = \"example-service\"/{n;s/version = \".*\"/version = \"$(cat $(results.app-version.path))\"/}" example-service/Cargo.lock
+
+        echo "Chargo.toml"
+        cat example-service/Cargo.toml
+
+    - name: bump-helm-chart
+      image: alpine:3.21.3
+      script: |
+        #!/bin/sh
+        cd $(workspaces.source.path)
+        apk add --no-cache curl
+        curl -L https://github.com/norwoodj/helm-docs/releases/download/v1.14.2/helm-docs_1.14.2_Linux_x86_64.tar.gz | tar xz && \
+          mv helm-docs /usr/local/bin/
+
+        OLD_CHART_VERSION=$(grep '^version:' example-service/chart/example-service/Chart.yaml | awk '{print $2}' | tr -d '"')
+
+        # Split version by '.' using 'set' and IFS
+        OLD_IFS=$IFS
+        IFS=.
+        set -- $OLD_CHART_VERSION
+        MAJOR=$1
+        MINOR=$2
+        PATCH=$3
+        IFS=$OLD_IFS
+
+        # Increment patch
+        PATCH=$((PATCH + 1))
+
+        CHART_VERSION="$MAJOR.$MINOR.$PATCH"
+        echo "CHART_VERSION=$CHART_VERSION"
+        echo -n "$CHART_VERSION" > $(results.chart-version.path)
+
+        sed -i "s/^appVersion: .*/appVersion: \"$(cat $(results.app-version.path))\"/" example-service/chart/example-service/Chart.yaml
+        sed -i "s/^version: .*/version: \"$(cat $(results.chart-version.path))\"/" example-service/chart/example-service/Chart.yaml
+        helm-docs
+
+        echo "Chart.yaml"
+        cat example-service/chart/example-service/Chart.yaml
