@@ -6,7 +6,7 @@ use thiserror::Error;
 use tonic::async_trait;
 use tonic::transport::Channel;
 use tracing::{trace, warn};
-use word::{word_service_client::WordServiceClient, ChainRequest};
+use word::{word_service_client::WordServiceClient, ChainRequest, HealthRequest};
 
 pub mod word {
     tonic::include_proto!("word");
@@ -47,6 +47,15 @@ impl Client for GrpcClient {
 
     fn get_url(&self) -> String {
         self.service_url.clone()
+    }
+
+    async fn health(&mut self) -> Result<(), ClientError<GrpcClientError>> {
+        self.client
+            .health(HealthRequest {})
+            .await
+            .map_err(|_| ClientError::ServiceUnavailable)?;
+
+        Ok(())
     }
 
     async fn chain(

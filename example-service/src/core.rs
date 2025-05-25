@@ -19,6 +19,8 @@ pub enum CoreError<SE: Error, CE: Error> {
     AlreadyExists(String),
     #[error("Store is empty")]
     Empty,
+    #[error("Service is unhealthy")]
+    ServiceUnavailable,
     #[error("gRPC client error")]
     ClientError(#[source] ClientError<CE>),
     #[error("Index error when picking random element in Vec")]
@@ -39,6 +41,22 @@ impl<S: Store, C: Client> Core<S, C> {
             store,
             connected_services,
         }
+    }
+
+    pub async fn health_check(&self) -> Result<(), CoreError<S::E, C::E>> {
+        let mut connected_services = self.connected_services.read().await.clone();
+
+        for service in connected_services.iter_mut() {
+            if let Err(e) = service.health().await {
+                error!(
+                    "Health check failed for connected service {:0}: {:?}",
+                    service.get_url(),
+                    e
+                );
+                return Err(CoreError::ServiceUnavailable);
+            }
+        }
+        Ok(())
     }
 
     pub async fn get_word(&self, word: String) -> Result<String, CoreError<S::E, C::E>> {

@@ -34,6 +34,8 @@ pub enum HttpInterfaceError {
     Conflict(String),
     #[error("Bad request: {0}")]
     BadRequest(String),
+    #[error("Service unavailable")]
+    ServiceUnavailable,
     #[error("Internal server error")]
     InternalServerError,
 }
@@ -51,6 +53,10 @@ impl Into<(StatusCode, String)> for HttpInterfaceError {
                 "Internal server error".to_string(),
             ),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            Self::ServiceUnavailable => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Service unavailable".to_string(),
+            ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Unknown error".to_string(),
@@ -91,10 +97,17 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
             .route("/word/{word}", get(Self::get_word))
             .route("/word/random", post(Self::random_word))
             .route("/word/chain", post(Self::start_chain))
+            .route("/health", get(Self::health_check))
             .with_state(self.core.clone())
-            .route("/health", get(|| async { "Ok" }))
             .layer(TraceLayer::new_for_http())
             .layer(axum_metrics::MetricLayer::default())
+    }
+
+    async fn health_check(State(state): State<Core<S, C>>) -> Result<(), (StatusCode, String)> {
+        state.health_check().await.map_err(|err| match err {
+            CoreError::ServiceUnavailable => HttpInterfaceError::ServiceUnavailable.into(),
+            _ => HttpInterfaceError::InternalServerError.into(),
+        })
     }
 
     async fn add_word(
