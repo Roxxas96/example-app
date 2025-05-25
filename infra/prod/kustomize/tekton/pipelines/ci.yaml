@@ -1,0 +1,105 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: example-app-ci
+spec:
+  description: |
+    Pipeline running the full ci of the repo.
+  params:
+    - name: git-revision
+      type: string
+      description: Revision to checkout. (branch, tag, sha, ref, etc...).
+  workspaces:
+    - name: shared-data
+      description: |
+        This workspace contains the cloned repo files, so they can be read by the
+        next task.
+    - name: git-credentials
+      description: My ssh credentials
+  tasks:
+    - name: fetch-source
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: shared-data
+        - name: ssh-directory
+          workspace: git-credentials
+      params:
+        - name: url
+          value: git@github.com:Roxxas96/example-app.git
+        - name: revision
+          value: origin/$(params.git-revision)
+        - name: depth
+          value: 0
+        - name: fetchTags
+          value: "true"
+        - name: refspec
+          value: +refs/heads/*:refs/remotes/origin/*
+    - name: pre-commits
+      runAfter: [fetch-source]
+      params:
+        - name: revision
+          value: $(params.git-revision)
+      taskRef:
+        name: pre-commits
+      workspaces:
+        - name: source
+          workspace: shared-data
+    - name: bump-version
+      runAfter: [fetch-source]
+      taskRef:
+        name: example-app-bump-version
+      workspaces:
+        - name: source
+          workspace: shared-data
+    - name: commit-version
+      runAfter: [bump-version]
+      when:
+        - input: $(params.git-revision)
+          operator: in
+          values: [refs/heads/main]
+      taskRef:
+        name: commit-changes
+      params:
+        - name: commit-message
+          value: "chore: [skip ci] bump version to $(tasks.bump-version.results.app-version)"
+        - name: commit-username
+          value: github-actions[bot]
+        - name: commit-email
+          value: github-actions[bot]@users.noreply.github.com
+        - name: revision
+          value: $(params.git-revision)
+      workspaces:
+        - name: source
+          workspace: shared-data
+        - name: ssh-directory
+          workspace: git-credentials
+# ---
+# apiVersion: tekton.dev/v1beta1
+# kind: PipelineRun
+# metadata:
+#   name: example-app-ci-run
+# spec:
+#   pipelineRef:
+#     name: example-app-ci
+#   podTemplate:
+#     securityContext:
+#       fsGroup: 65532
+#     imagePullSecrets:
+#       - name: harbor-credentials
+#   workspaces:
+#     - name: shared-data
+#       volumeClaimTemplate:
+#         spec:
+#           accessModes:
+#             - ReadWriteOnce
+#           resources:
+#             requests:
+#               storage: 1Gi
+#     - name: git-credentials
+#       secret:
+#         secretName: home-infra-ssh-key
+#   params:
+#     - name: git-revision
+#       value: refs/heads/main
