@@ -1,0 +1,28 @@
+# trunk-ignore(checkov/CKV_K8S_21)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tekton-dashboard
+  namespace: tekton-pipelines
+  labels:
+    name: tekton-dashboard
+  annotations:
+    cert-manager.io/cluster-issuer: internal-prod
+    nginx.ingress.kubernetes.io/whitelist-source-range: 10.244.0.0/16,192.168.0.0/24
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: tekton.internal.roxxas96.net
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: tekton-dashboard
+                port:
+                  number: 9097
+  tls:
+    - hosts:
+        - tekton.internal.roxxas96.net
+      secretName: tekton-dashboard-tls
