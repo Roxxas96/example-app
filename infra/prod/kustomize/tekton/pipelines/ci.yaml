@@ -15,7 +15,11 @@ spec:
         This workspace contains the cloned repo files, so they can be read by the
         next task.
     - name: git-credentials
-      description: My ssh credentials
+      description: Credentials for git operations.
+    - name: docker-credentials
+      description: Credentials for docker operations.
+    - name: cosign-key
+      description: Workspace containing cosign.key
   tasks:
     - name: fetch-source
       taskRef:
@@ -58,7 +62,7 @@ spec:
       when:
         - input: $(params.git-revision)
           operator: in
-          values: [refs/heads/main]
+          values: [main]
       taskRef:
         name: commit-changes
       params:
@@ -75,31 +79,63 @@ spec:
           workspace: shared-data
         - name: ssh-directory
           workspace: git-credentials
-# ---
-# apiVersion: tekton.dev/v1beta1
-# kind: PipelineRun
-# metadata:
-#   name: example-app-ci-run
-# spec:
-#   pipelineRef:
-#     name: example-app-ci
-#   podTemplate:
-#     securityContext:
-#       fsGroup: 65532
-#     imagePullSecrets:
-#       - name: harbor-credentials
-#   workspaces:
-#     - name: shared-data
-#       volumeClaimTemplate:
-#         spec:
-#           accessModes:
-#             - ReadWriteOnce
-#           resources:
-#             requests:
-#               storage: 1Gi
-#     - name: git-credentials
-#       secret:
-#         secretName: home-infra-ssh-key
-#   params:
-#     - name: git-revision
-#       value: refs/heads/main
+    - name: docker-publish
+      runAfter: [bump-version]
+      when:
+        - input: $(params.git-revision)
+          operator: in
+          values: [main]
+      taskRef:
+        name: kaniko
+      params:
+        - name: IMAGE
+          value: harbor.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)
+        - name: DOCKERFILE
+          value: example-service/Dockerfile
+        - name: CONTEXT
+          value: example-service
+        - name: EXTRA_ARGS
+          value:
+            - --cache=true
+            - --destination=harbor.roxxas96.net/example-app/example-service:latest
+      workspaces:
+        - name: source
+          workspace: shared-data
+        - name: dockerconfig
+          workspace: docker-credentials
+    - name: docker-sign
+      runAfter: [docker-publish]
+      taskRef:
+        name: artifact-sign
+      workspaces:
+        - name: cosign-key
+          workspace: cosign-key
+        - name: registry-credentials
+          workspace: docker-credentials
+      params:
+        - name: artifact
+          value: harbor.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)@$(tasks.docker-publish.results.IMAGE_DIGEST)
+    - name: docker-build
+      runAfter: [bump-version]
+      when:
+        - input: $(params.git-revision)
+          operator: notin
+          values: [main]
+      taskRef:
+        name: kaniko
+      params:
+        - name: IMAGE
+          value: harbor.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)
+        - name: DOCKERFILE
+          value: example-service/Dockerfile
+        - name: CONTEXT
+          value: example-service
+        - name: EXTRA_ARGS
+          value:
+            - --destination=harbor.roxxas96.net/example-app/example-service:latest
+            - --no-push
+      workspaces:
+        - name: source
+          workspace: shared-data
+        - name: dockerconfig
+          workspace: docker-credentials
