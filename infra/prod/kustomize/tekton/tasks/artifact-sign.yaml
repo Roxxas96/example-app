@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: artifact-sign
+spec:
+  description: Sign a given artifact using cosign.
+  params:
+    - name: artifact
+      description: The artifact to sign (digest included)
+  workspaces:
+    - name: cosign-key
+      description: Workspace containing cosign.key
+    - name: registry-credentials
+      description: Credentials to the registry where the artifact is hosted.
+  steps:
+    - name: sign-artifact
+      image: bitnami/cosign:2.5.0
+      script: |
+        #!/bin/sh
+        cp $(workspaces.registry-credentials.path)/config.json ~/.docker/config.json
+        COSIGN_PASSWORD="" cosign sign -y --key $(workspaces.cosign-key.path)/cosign.key "$(params.artifact)"

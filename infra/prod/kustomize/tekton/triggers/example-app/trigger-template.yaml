@@ -32,6 +32,12 @@ spec:
           - name: git-credentials
             secret:
               secretName: home-infra-ssh-key
+          - name: docker-credentials
+            secret:
+              secretName: tekton-harbor-credentials
+          - name: cosign-key
+            secret:
+              secretName: cosign-key
         params:
           - name: git-revision
             value: $(tt.params.git-revision)

@@ -6,18 +6,17 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y protobuf-compiler
 
-RUN --mount=type=bind,source=src,target=src \
-    --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
-    --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
-    --mount=type=bind,source=build.rs,target=build.rs \
-    --mount=type=bind,source=proto/,target=proto/ \
-    --mount=type=cache,target=/app/target/ \
-    --mount=type=cache,target=/usr/local/cargo/registry/ \
-    <<EOF
-set -e
-cargo build --locked --release
-cp ./target/release/$APP_NAME /bin/server
-EOF
+# Copy source files into the container
+COPY src/ src/
+COPY Cargo.toml Cargo.toml
+COPY Cargo.lock Cargo.lock
+COPY build.rs build.rs
+COPY proto/ proto/
+
+# Build the app
+RUN set -e && \
+    cargo build --locked --release && \
+    cp ./target/release/$APP_NAME /bin/server
 
 FROM debian:bullseye-slim AS final
 

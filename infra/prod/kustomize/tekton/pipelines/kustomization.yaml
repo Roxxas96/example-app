@@ -4,3 +4,5 @@ namespace: tekton-pipelines
 
 resources:
   - ci.yaml
+  - docker-repo.sealedsecret.yaml
+  - cosign.sealedsecret.yaml
