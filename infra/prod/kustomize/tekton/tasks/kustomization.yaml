@@ -10,3 +10,4 @@ resources:
   - commit-changes.yaml
   - artifact-sign.yaml
   - helm-publish.yaml
+  - chart-testing.yaml
