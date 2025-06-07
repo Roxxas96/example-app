@@ -42,6 +42,13 @@ spec:
           value: "true"
         - name: refspec
           value: +refs/heads/*:refs/remotes/origin/*
+    - name: chart-test
+      runAfter: [fetch-source]
+      taskRef:
+        name: chart-testing
+      workspaces:
+        - name: source
+          workspace: shared-data
     - name: pre-commits
       runAfter: [fetch-source]
       params:

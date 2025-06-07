@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: chart-testing
+spec:
+  description: Test a helm chart using the ct cli.
+  workspaces:
+    - name: source
+  steps:
+    - name: chart-test
+      image: quay.io/helmpack/chart-testing:v3.13.0
+      onError: continue
+      script: |
+        #!/bin/sh
+        git config --global --add safe.directory $(workspaces.source.path)
+        cd $(workspaces.source.path)
+
+        # Workaround because ct doesn't work without a kubeconfig
+        # Variables
+        TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+        CA_CERT="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+        SERVER="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
+        NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+        SA_NAME="chart-testing"
+        KUBECONFIG_FILE="/tmp/kubeconfig"
+
+        # Create kubeconfig
+        kubectl config --kubeconfig=$KUBECONFIG_FILE set-cluster in-cluster \
+          --server=$SERVER \
+          --certificate-authority=$CA_CERT \
+          --embed-certs=true
+
+        kubectl config --kubeconfig=$KUBECONFIG_FILE set-credentials $SA_NAME \
+          --token=$TOKEN
+
+        kubectl config --kubeconfig=$KUBECONFIG_FILE set-context $SA_NAME-context \
+          --cluster=in-cluster \
+          --user=$SA_NAME \
+          --namespace=$NAMESPACE
+
+        kubectl config --kubeconfig=$KUBECONFIG_FILE use-context $SA_NAME-context
+
+        export KUBECONFIG=$KUBECONFIG_FILE
+
+        ct lint-and-install

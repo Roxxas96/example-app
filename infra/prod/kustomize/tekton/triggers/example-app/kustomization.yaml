@@ -8,4 +8,5 @@ resources:
   - role-binding.yaml
   - cluster-role-binding.yaml
   - trigger-template.yaml
+  - chart-testing-sa.yaml
   - on-push

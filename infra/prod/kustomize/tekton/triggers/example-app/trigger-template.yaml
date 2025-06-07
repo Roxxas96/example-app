@@ -15,6 +15,7 @@ spec:
       spec:
         pipelineRef:
           name: example-app-ci
+        serviceAccountName: chart-testing
         podTemplate:
           securityContext:
             fsGroup: 65532

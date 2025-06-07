@@ -6,3 +6,4 @@ resources:
   - harbor
   - example-app
   - tekton
+  - chart-testing
