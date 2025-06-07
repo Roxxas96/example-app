@@ -18,6 +18,8 @@ spec:
       description: Credentials for git operations.
     - name: docker-credentials
       description: Credentials for docker operations.
+    - name: helm-credentials
+      description: Credentials for helm operations.
     - name: cosign-key
       description: Workspace containing cosign.key
   tasks:
@@ -139,3 +141,33 @@ spec:
           workspace: shared-data
         - name: dockerconfig
           workspace: docker-credentials
+    - name: helm-publish
+      runAfter: [docker-publish]
+      taskRef:
+        name: helm-publish
+      params:
+        - name: chart-path
+          value: example-service/chart/example-service
+        - name: chart-name
+          value: example-service
+        - name: chart-version
+          value: $(tasks.bump-version.results.chart-version)
+        - name: registry
+          value: oci://harbor.roxxas96.net/example-app-helm
+      workspaces:
+        - name: source
+          workspace: shared-data
+        - name: registry-credentials
+          workspace: helm-credentials
+    - name: helm-sign
+      runAfter: [helm-publish]
+      taskRef:
+        name: artifact-sign
+      workspaces:
+        - name: cosign-key
+          workspace: cosign-key
+        - name: registry-credentials
+          workspace: helm-credentials
+      params:
+        - name: artifact
+          value: harbor.roxxas96.net/example-app-helm/example-service:$(tasks.bump-version.results.chart-version)@$(tasks.helm-publish.results.digest)

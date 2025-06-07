@@ -1,0 +1,39 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: helm-publish
+spec:
+  description: Pusblish a helm chart.
+  params:
+    - name: chart-path
+      description: The path to the helm chart to publish.
+    - name: chart-name
+      description: The name of the helm chart to publish.
+    - name: chart-version
+      description: The version of the helm chart to publish.
+    - name: registry
+      description: The registry to publish to.
+  workspaces:
+    - name: source
+    - name: registry-credentials
+      description: Credentials to the registry where the artifact is hosted.
+  results:
+    - name: digest
+      description: The digest of the published artifact.
+  steps:
+    - name: helm-publish
+      image: alpine/helm:3.18.1
+      script: |
+        #!/bin/sh
+        cd $(workspaces.source.path)
+
+        mkdir -p ~/.config/helm/registry/
+        cp $(workspaces.registry-credentials.path)/config.json ~/.config/helm/registry/config.json
+
+        helm package $(params.chart-path)
+        OUTPUT=$(helm push $(params.chart-name)-$(params.chart-version).tgz $(params.registry) 2>&1)
+        echo "$OUTPUT"
+
+        DIGEST=$(echo "$OUTPUT" | grep -oE "Digest: sha256:[a-f0-9]+" | awk '{print $2}')
+        echo "DIGEST=$DIGEST"
+        echo -n "$DIGEST" > $(results.digest.path)

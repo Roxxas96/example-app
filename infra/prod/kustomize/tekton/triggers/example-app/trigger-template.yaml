@@ -35,6 +35,9 @@ spec:
           - name: docker-credentials
             secret:
               secretName: tekton-harbor-credentials
+          - name: helm-credentials
+            secret:
+              secretName: tekton-helm-harbor-credentials
           - name: cosign-key
             secret:
               secretName: cosign-key
