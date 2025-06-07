@@ -13,6 +13,13 @@ spec:
       image: harbor.roxxas96.net/example-app/pre-commits:0.1.0
       script: |
         #!/bin/sh
+        # standard bash error handling
+        set -o errexit;
+        set -o pipefail;
+        set -o nounset;
+        # debug commands
+        set -x;
+
         git config --global --add safe.directory $(workspaces.source.path)
         cd $(workspaces.source.path)
         pre-commit run --from-ref origin/main --to-ref origin/$(params.revision) --show-diff-on-failure
