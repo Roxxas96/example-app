@@ -25,6 +25,13 @@ spec:
       image: alpine/helm:3.18.1
       script: |
         #!/bin/sh
+        # standard bash error handling
+        set -o errexit;
+        set -o pipefail;
+        set -o nounset;
+        # debug commands
+        set -x;
+
         cd $(workspaces.source.path)
 
         mkdir -p ~/.config/helm/registry/

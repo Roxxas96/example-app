@@ -12,6 +12,13 @@ spec:
       onError: continue
       script: |
         #!/bin/sh
+        # standard bash error handling
+        set -o errexit;
+        set -o pipefail;
+        set -o nounset;
+        # debug commands
+        set -x;
+
         git config --global --add safe.directory $(workspaces.source.path)
         cd $(workspaces.source.path)
 
