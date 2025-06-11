@@ -37,7 +37,7 @@ spec:
         - name: revision
           value: origin/$(params.git-revision)
         - name: depth
-          value: 0
+          value: "0"
         - name: fetchTags
           value: "true"
         - name: refspec
@@ -45,6 +45,7 @@ spec:
     - name: chart-test
       runAfter: [fetch-source]
       taskRef:
+        kind: Task
         name: chart-testing
       workspaces:
         - name: source
@@ -55,6 +56,7 @@ spec:
         - name: revision
           value: $(params.git-revision)
       taskRef:
+        kind: Task
         name: pre-commits
       workspaces:
         - name: source
@@ -62,6 +64,7 @@ spec:
     - name: bump-version
       runAfter: [fetch-source]
       taskRef:
+        kind: Task
         name: example-app-bump-version
       workspaces:
         - name: source
@@ -73,6 +76,7 @@ spec:
           operator: in
           values: [main]
       taskRef:
+        kind: Task
         name: commit-changes
       params:
         - name: commit-message
@@ -95,6 +99,7 @@ spec:
           operator: in
           values: [main]
       taskRef:
+        kind: Task
         name: kaniko
       params:
         - name: IMAGE
@@ -115,6 +120,7 @@ spec:
     - name: docker-sign
       runAfter: [docker-publish]
       taskRef:
+        kind: Task
         name: artifact-sign
       workspaces:
         - name: cosign-key
@@ -131,6 +137,7 @@ spec:
           operator: notin
           values: [main]
       taskRef:
+        kind: Task
         name: kaniko
       params:
         - name: IMAGE
@@ -151,6 +158,7 @@ spec:
     - name: helm-publish
       runAfter: [docker-publish]
       taskRef:
+        kind: Task
         name: helm-publish
       params:
         - name: chart-path
@@ -169,6 +177,7 @@ spec:
     - name: helm-sign
       runAfter: [helm-publish]
       taskRef:
+        kind: Task
         name: artifact-sign
       workspaces:
         - name: cosign-key
