@@ -69,6 +69,11 @@ spec:
 
         exposureType: ingress
 
+        persistence:
+          persistentVolumeClaim:
+            registry:
+              size: 20Gi
+
         ingress:
           core:
             ingressClassName: nginx
