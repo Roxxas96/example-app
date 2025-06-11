@@ -2,7 +2,7 @@
 FROM python:3.13-alpine AS builder
 
 LABEL image="harbor.roxxas96.net/example-app/pre-commits"
-LABEL tag="0.1.0"
+LABEL tag="0.2.0"
 LABEL maintainer="gomez.a.corneille@gmail.com"
 
 ARG PRE_COMMIT_VERSION=4.2.0
@@ -13,6 +13,7 @@ ARG TFLINT_VERSION=0.57.0
 ARG HELM_DOCS_VERSION=1.14.2
 ARG HCLEDIT_VERSION=0.2.17
 ARG TFUPDATE_VERSION=0.9.1
+ARG KUSTOMIZE_VERSION=5.6.0
 
 RUN apk add --no-cache \
     git \
@@ -58,6 +59,10 @@ RUN curl -L https://github.com/minamijoyo/tfupdate/releases/download/v${TFUPDATE
 RUN curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
     unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && \
     rm protoc-${PROTOC_VERSION}-linux-x86_64.zip
+
+# Install Kustomize
+RUN curl -L https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz | tar xz && \
+    mv kustomize /usr/local/bin/
 
 # Stage 2: Minimal runtime
 FROM alpine:latest

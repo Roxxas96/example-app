@@ -10,7 +10,7 @@ spec:
     - name: revision
   steps:
     - name: pre-commits
-      image: harbor.roxxas96.net/example-app/pre-commits:0.1.0
+      image: harbor.roxxas96.net/example-app/pre-commits:0.2.0
       script: |
         #!/bin/sh
         # standard bash error handling
