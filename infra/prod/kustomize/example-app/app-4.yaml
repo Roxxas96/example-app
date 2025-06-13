@@ -10,8 +10,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: example-app
   syncPolicy:
-    automated:
-      enabled: true
+    automated: {}
   source:
     repoURL: harbor.roxxas96.net
     targetRevision: "*.*.*"

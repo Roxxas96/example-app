@@ -10,3 +10,39 @@ spec:
     repoURL: git@github.com:Roxxas96/example-app.git
     targetRevision: main
     path: infra/prod/kustomize
+  ignoreDifferences:
+    - group: "*"
+      kind: CustomResourceDefinition
+      name: customruns.tekton.dev
+      jsonPointers:
+        - /spec/preserveUnknownFields
+    - group: "*"
+      kind: CustomResourceDefinition
+      name: extensions.dashboard.tekton.dev
+      jsonPointers:
+        - /spec/preserveUnknownFields
+    - group: "*"
+      kind: CustomResourceDefinition
+      name: pipelineruns.tekton.dev
+      jsonPointers:
+        - /spec/preserveUnknownFields
+    - group: "*"
+      kind: CustomResourceDefinition
+      name: pipelines.tekton.dev
+      jsonPointers:
+        - /spec/preserveUnknownFields
+    - group: "*"
+      kind: CustomResourceDefinition
+      name: stepactions.tekton.dev
+      jsonPointers:
+        - /spec/preserveUnknownFields
+    - group: "*"
+      kind: CustomResourceDefinition
+      name: taskruns.tekton.dev
+      jsonPointers:
+        - /spec/preserveUnknownFields
+    - group: "*"
+      kind: CustomResourceDefinition
+      name: tasks.tekton.dev
+      jsonPointers:
+        - /spec/preserveUnknownFields
