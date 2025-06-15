@@ -69,6 +69,42 @@ spec:
 
         exposureType: ingress
 
+        jobservice:
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: 128Mi
+            limits:
+              cpu: "0.750"
+              memory: 728Mi
+
+        core:
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: 128Mi
+            limits:
+              cpu: "0.750"
+              memory: 728Mi
+
+        trivy:
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: 128Mi
+            limits:
+              cpu: "0.750"
+              memory: 728Mi
+
+        portal:
+          resources:
+            requests:
+              cpu: "0.1"
+              memory: 128Mi
+            limits:
+              cpu: "0.750"
+              memory: 728Mi
+
         persistence:
           persistentVolumeClaim:
             registry:
