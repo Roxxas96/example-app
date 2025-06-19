@@ -18,7 +18,6 @@ spec:
             - name: secretRef
               value:
                 secretName: github-secret
-                # trunk-ignore(checkov/CKV_SECRET_6)
                 secretKey: secretToken
             - name: eventTypes
               value: [push, pull_request]

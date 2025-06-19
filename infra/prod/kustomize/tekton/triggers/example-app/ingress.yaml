@@ -1,4 +1,3 @@
-# trunk-ignore(checkov/CKV_K8S_21)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
