@@ -9,3 +9,4 @@ resources:
   - app-3.yaml
   - app-4.yaml
   - app-5.yaml
+  - namespace.yaml
