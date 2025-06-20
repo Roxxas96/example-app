@@ -98,6 +98,7 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
             .route("/word/random", post(Self::random_word))
             .route("/word/chain", post(Self::start_chain))
             .route("/health", get(Self::health_check))
+            .route("/ready", get(Self::ready_check))
             .with_state(self.core.clone())
             .layer(TraceLayer::new_for_http())
             .layer(axum_metrics::MetricLayer::default())
@@ -106,6 +107,12 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
     async fn health_check(State(state): State<Core<S, C>>) -> Result<(), (StatusCode, String)> {
         state.health_check().await.map_err(|err| match err {
             CoreError::ServiceUnavailable => HttpInterfaceError::ServiceUnavailable.into(),
+            _ => HttpInterfaceError::InternalServerError.into(),
+        })
+    }
+
+    async fn ready_check(State(state): State<Core<S, C>>) -> Result<(), (StatusCode, String)> {
+        state.ready_check().await.map_err(|err| match err {
             _ => HttpInterfaceError::InternalServerError.into(),
         })
     }

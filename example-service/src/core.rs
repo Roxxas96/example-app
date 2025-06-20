@@ -59,6 +59,10 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(())
     }
 
+    pub async fn ready_check(&self) -> Result<(), CoreError<S::E, C::E>> {
+        Ok(())
+    }
+
     pub async fn get_word(&self, word: String) -> Result<String, CoreError<S::E, C::E>> {
         info!("Getting word {0}...", word);
         counter!("get_word_num_call").increment(1);

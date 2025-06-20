@@ -112,7 +112,7 @@ livenessProbe:
     port: http
 readinessProbe:
   httpGet:
-    path: /health
+    path: /ready
     port: http
 
 autoscaling:
