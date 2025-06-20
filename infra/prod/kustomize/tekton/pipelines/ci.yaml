@@ -103,7 +103,7 @@ spec:
         name: kaniko
       params:
         - name: IMAGE
-          value: harbor.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)
+          value: harbor.internal.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)
         - name: DOCKERFILE
           value: example-service/Dockerfile
         - name: CONTEXT
@@ -111,7 +111,7 @@ spec:
         - name: EXTRA_ARGS
           value:
             - --cache=true
-            - --destination=harbor.roxxas96.net/example-app/example-service:latest
+            - --destination=harbor.internal.roxxas96.net/example-app/example-service:latest
       workspaces:
         - name: source
           workspace: shared-data
@@ -129,7 +129,7 @@ spec:
           workspace: docker-credentials
       params:
         - name: artifact
-          value: harbor.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)@$(tasks.docker-publish.results.IMAGE_DIGEST)
+          value: harbor.internal.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)@$(tasks.docker-publish.results.IMAGE_DIGEST)
     - name: docker-build
       runAfter: [bump-version]
       when:
@@ -141,14 +141,14 @@ spec:
         name: kaniko
       params:
         - name: IMAGE
-          value: harbor.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)
+          value: harbor.internal.roxxas96.net/example-app/example-service:$(tasks.bump-version.results.app-version)
         - name: DOCKERFILE
           value: example-service/Dockerfile
         - name: CONTEXT
           value: example-service
         - name: EXTRA_ARGS
           value:
-            - --destination=harbor.roxxas96.net/example-app/example-service:latest
+            - --destination=harbor.internal.roxxas96.net/example-app/example-service:latest
             - --no-push
       workspaces:
         - name: source
@@ -168,7 +168,7 @@ spec:
         - name: chart-version
           value: $(tasks.bump-version.results.chart-version)
         - name: registry
-          value: oci://harbor.roxxas96.net/example-app-helm
+          value: oci://harbor.internal.roxxas96.net/example-app-helm
       workspaces:
         - name: source
           workspace: shared-data
@@ -186,4 +186,4 @@ spec:
           workspace: helm-credentials
       params:
         - name: artifact
-          value: harbor.roxxas96.net/example-app-helm/example-service:$(tasks.bump-version.results.chart-version)@$(tasks.helm-publish.results.digest)
+          value: harbor.internal.roxxas96.net/example-app-helm/example-service:$(tasks.bump-version.results.chart-version)@$(tasks.helm-publish.results.digest)

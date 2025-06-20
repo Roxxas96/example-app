@@ -65,7 +65,7 @@ spec:
     chart: harbor
     helm:
       values: |
-        externalURL: https://harbor.roxxas96.net
+        externalURL: https://harbor.internal.roxxas96.net
 
         exposureType: ingress
 
@@ -113,11 +113,10 @@ spec:
         ingress:
           core:
             ingressClassName: nginx
-            hostname: harbor.roxxas96.net
+            hostname: harbor.internal.roxxas96.net
             annotations:
-              cert-manager.io/cluster-issuer: external-prod
-              external-dns.alpha.kubernetes.io/target: 95.90.150.138
-              external-dns.alpha.kubernetes.io/hostname: harbor.roxxas96.net
+              cert-manager.io/cluster-issuer: internal-prod
+              nginx.ingress.kubernetes.io/whitelist-source-range: 10.244.0.0/16,192.168.0.0/24
             tls: true
 
         metrics:

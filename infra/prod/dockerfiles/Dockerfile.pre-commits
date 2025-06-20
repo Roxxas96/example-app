@@ -1,7 +1,7 @@
 # Stage 1: Build environment
 FROM python:3.13-alpine AS builder
 
-LABEL image="harbor.roxxas96.net/example-app/pre-commits"
+LABEL image="harbor.internal.roxxas96.net/example-app/pre-commits"
 LABEL tag="0.2.0"
 LABEL maintainer="gomez.a.corneille@gmail.com"
 

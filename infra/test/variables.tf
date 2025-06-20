@@ -1,7 +1,7 @@
 variable "harbor_host" {
   description = "Host to Harbor"
   type        = string
-  default     = "harbor.roxxas96.net"
+  default     = "harbor.internal.roxxas96.net"
 }
 
 variable "harbor_docker_username" {

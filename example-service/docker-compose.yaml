@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: final
-    image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
       - 3001:3001
       - 50051:50051
@@ -22,7 +22,7 @@ services:
     build:
       context: .
       target: final
-    image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
       - 3002:3001
       - 50052:50051
@@ -41,7 +41,7 @@ services:
     build:
       context: .
       target: final
-    image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
       - 3003:3001
       - 50053:50051
@@ -60,7 +60,7 @@ services:
     build:
       context: .
       target: final
-    image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
       - 3004:3001
       - 50054:50051
@@ -79,7 +79,7 @@ services:
     build:
       context: .
       target: final
-    image: ${DOCKER_REGISTRY:-harbor.roxxas96.net/example-app}/example-service:${VERSION:-latest}
+    image: ${DOCKER_REGISTRY:-harbor.internal.roxxas96.net/example-app}/example-service:${VERSION:-latest}
     ports:
       - 3005:3001
       - 50055:50051

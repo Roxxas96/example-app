@@ -12,7 +12,7 @@ spec:
   syncPolicy:
     automated: {}
   source:
-    repoURL: harbor.roxxas96.net
+    repoURL: harbor.internal.roxxas96.net
     targetRevision: "*.*.*"
     chart: example-app-helm/example-service
     helm:
