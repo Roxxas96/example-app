@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - argocd
   - harbor
+  - open-telemetry
   - example-app
   - tekton
   - chart-testing

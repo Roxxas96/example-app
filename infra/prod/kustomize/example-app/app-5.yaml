@@ -19,3 +19,5 @@ spec:
       values: |
         config:
           connectedServices: http://example-service-1:50051,http://example-service-2:50051,http://example-service-3:50051,http://example-service-4:50051
+        traces:
+          endpoint: http://jaeger-inmemory-instance-collector.open-telemetry:4317
