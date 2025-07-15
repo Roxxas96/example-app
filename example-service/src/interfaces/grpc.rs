@@ -36,6 +36,7 @@ impl Into<Status> for GrpcInterfaceError {
     }
 }
 
+#[derive(Debug)]
 pub struct GrpcInterface<S: Store, C: Client> {
     core: Core<S, C>,
 }
@@ -48,6 +49,7 @@ impl<S: Store, C: Client> GrpcInterface<S, C> {
 
 #[tonic::async_trait]
 impl<S: Store, C: Client> WordService for GrpcInterface<S, C> {
+    #[tracing::instrument]
     async fn chain(
         &self,
         request: Request<ChainRequest>,

@@ -59,6 +59,8 @@ Helm chart to deploy the example-service rust application
 | serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template |
 | tolerations | list | `[]` |  |
+| traces.enabled | bool | `true` | Enable/Disable traces generation |
+| traces.endpoint | string | `""` | Endpoint that traces are sent to |
 | volumeMounts | list | `[]` | Additional volumeMounts on the output Deployment definition. |
 | volumes | list | `[]` | Additional volumes on the output Deployment definition. |
 

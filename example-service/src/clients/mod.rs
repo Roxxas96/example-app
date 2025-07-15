@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::Debug};
 use thiserror::Error;
 use tonic::async_trait;
 
@@ -17,7 +17,7 @@ pub enum ClientError<E: Error> {
 }
 
 #[async_trait]
-pub trait Client: Clone + Send + Sync + 'static {
+pub trait Client: Clone + Send + Sync + 'static + Debug {
     type E: Error;
 
     fn get_url(&self) -> String;

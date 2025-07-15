@@ -29,7 +29,7 @@ pub enum CoreError<SE: Error, CE: Error> {
     NoConnectedServices,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Core<S: Store, C: Client> {
     store: S,
     connected_services: Arc<RwLock<Vec<C>>>,
@@ -63,6 +63,7 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(())
     }
 
+    #[tracing::instrument]
     pub async fn get_word(&self, word: String) -> Result<String, CoreError<S::E, C::E>> {
         info!("Getting word {0}...", word);
         counter!("get_word_num_call").increment(1);
@@ -80,6 +81,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
+    #[tracing::instrument]
     pub async fn add_word(&mut self, word: String) -> Result<(), CoreError<S::E, C::E>> {
         info!("Adding word {0}...", word);
         counter!("add_word_num_call").increment(1);
@@ -96,6 +98,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
+    #[tracing::instrument]
     pub async fn delete_word(&mut self, word: String) -> Result<(), CoreError<S::E, C::E>> {
         info!("Deleting word {0}...", word);
         counter!("delete_word_num_call").increment(1);
@@ -112,6 +115,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
+    #[tracing::instrument]
     pub async fn random_word(&self) -> Result<String, CoreError<S::E, C::E>> {
         info!("Getting random word...");
         counter!("random_word_num_call").increment(1);
@@ -123,6 +127,7 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(random_word)
     }
 
+    #[tracing::instrument]
     pub async fn chain(
         &self,
         chain: Vec<String>,
@@ -152,6 +157,7 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(new_chain)
     }
 
+    #[tracing::instrument]
     async fn select_random_word(&self) -> Result<String, CoreError<S::E, C::E>> {
         Ok(self
             .store
@@ -166,6 +172,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
+    #[tracing::instrument]
     async fn chain_with_random_service(
         &self,
         chain: Vec<String>,

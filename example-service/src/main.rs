@@ -11,6 +11,10 @@ use interfaces::{
     http::{HttpInterface, HttpInterfaceError},
 };
 use metrics_exporter_prometheus::PrometheusBuilder;
+use opentelemetry::trace::TracerProvider as _;
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::trace::SdkTracerProvider;
+use opentelemetry_sdk::Resource;
 use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::{net::AddrParseError, sync::Arc};
@@ -19,6 +23,9 @@ use thiserror::Error;
 use tokio::sync::RwLock;
 use tonic::transport::Server;
 use tracing::{debug, error, info};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::Registry;
 
 #[derive(Error, Debug)]
 enum ExampleAppError {
@@ -40,6 +47,10 @@ enum ExampleAppError {
     GrpcClientError(#[source] GrpcClientError),
     #[error("Error with Prometheus interface")]
     PrometheusError(#[source] metrics_exporter_prometheus::BuildError),
+    #[error("Error when building OpenTelemetry exporter")]
+    OtelExporterBuildError(#[source] opentelemetry_otlp::ExporterBuildError),
+    #[error("Error when init tracing registry")]
+    TracingRegistryInitError(#[source] tracing_subscriber::util::TryInitError),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -47,20 +58,18 @@ struct ExampleAppConfig {
     http_port: u16,
     grpc_port: u16,
     metrics_port: u16,
-    connected_services: Vec<String>,
+    connected_services: String,
+    tracing_endpoint: String,
+    service_name: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), ExampleAppError> {
-    tracing_subscriber::fmt::init();
-    info!("Starting example service...");
-
-    info!("Building config...");
     let config: ExampleAppConfig = Config::builder()
         .add_source(
             config::Environment::default()
-                .try_parsing(true)
-                .list_separator(","),
+                .prefix("EXAMPLE_SERVICE")
+                .separator("__"),
         )
         .set_default("http_port", 3001)
         .map_err(ExampleAppError::ConfigError)?
@@ -68,12 +77,42 @@ async fn main() -> Result<(), ExampleAppError> {
         .map_err(ExampleAppError::ConfigError)?
         .set_default("metrics_port", 9001)
         .map_err(ExampleAppError::ConfigError)?
-        .set_default("connected_services", Vec::<String>::new())
+        .set_default("connected_services", "")
+        .map_err(ExampleAppError::ConfigError)?
+        .set_default("tracing_endpoint", "http://localhost:4317")
+        .map_err(ExampleAppError::ConfigError)?
+        .set_default("service_name", "example-service-1")
         .map_err(ExampleAppError::ConfigError)?
         .build()
         .map_err(ExampleAppError::ConfigError)?
         .try_deserialize()
         .map_err(ExampleAppError::ConfigError)?;
+
+    let provider = SdkTracerProvider::builder()
+        .with_batch_exporter(
+            opentelemetry_otlp::SpanExporter::builder()
+                .with_tonic()
+                .with_endpoint(config.tracing_endpoint)
+                .build()
+                .map_err(ExampleAppError::OtelExporterBuildError)?,
+        )
+        .with_resource(
+            Resource::builder()
+                .with_service_name(config.service_name)
+                .build(),
+        )
+        .build();
+    let tracer = provider.tracer("readme_example");
+
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    Registry::default()
+        .with(tracing_subscriber::fmt::Layer::default())
+        .with(telemetry)
+        .try_init()
+        .map_err(ExampleAppError::TracingRegistryInitError)?;
+
+    info!("Starting example service...");
 
     let metrics_address =
         SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), config.metrics_port);
@@ -95,9 +134,9 @@ async fn main() -> Result<(), ExampleAppError> {
     let grpc_clients = Arc::new(RwLock::new(Vec::new()));
     let grpc_clients_clone = grpc_clients.clone();
     let grpc_clients_task = async move {
-        for service_url in config.connected_services {
+        for service_url in config.connected_services.split(',') {
             grpc_clients_clone.write().await.push(
-                GrpcClient::new(service_url.clone())
+                GrpcClient::new(service_url.to_string().clone())
                     .await
                     .map_err(ExampleAppError::GrpcClientError)?,
             );

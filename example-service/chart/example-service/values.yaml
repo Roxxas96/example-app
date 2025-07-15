@@ -61,6 +61,12 @@ service:
   # -- This sets the grpc ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   grpcPort: 50051
 
+traces:
+  # -- Enable/Disable traces generation
+  enabled: true
+  # -- Endpoint that traces are sent to
+  endpoint: ""
+
 metrics:
   # -- Enable/Disable metrics service endpoint
   enabled: true

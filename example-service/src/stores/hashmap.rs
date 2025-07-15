@@ -13,7 +13,7 @@ pub enum HashmapStoreError {
     WrongIndexGeneration,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HashmapStore {
     pub word_store: Arc<RwLock<HashMap<String, String>>>,
 }

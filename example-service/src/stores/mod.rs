@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::Debug};
 use thiserror::Error;
 use tonic::async_trait;
 
@@ -17,7 +17,7 @@ pub enum StoreError<E: Error> {
 }
 
 #[async_trait]
-pub trait Store: Send + Sync + 'static + Clone {
+pub trait Store: Send + Sync + 'static + Clone + Debug {
     type E: Error;
 
     async fn get_word(&self, word: String) -> Result<String, StoreError<Self::E>>;

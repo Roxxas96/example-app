@@ -24,7 +24,7 @@ pub enum GrpcClientError {
     },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct GrpcClient {
     client: WordServiceClient<Channel>,
     service_url: String,

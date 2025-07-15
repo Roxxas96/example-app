@@ -39,25 +39,29 @@ spec:
             {{- toYaml . | nindent 12}}
           {{- end}}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{.Values.image.pullPolicy}}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{.Values.service.httpPort}}
+              containerPort: {{ .Values.service.httpPort }}
               protocol: TCP
             - name: grpc
-              containerPort: {{.Values.service.grpcPort}}
+              containerPort: {{ .Values.service.grpcPort }}
               protocol: TCP
             - name: metrics
-              containerPort: {{.Values.metrics.port}}
+              containerPort: {{ .Values.metrics.port }}
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: {{include "example-service.fullname" .}}
+                name: {{ include "example-service.fullname" . }}
           env:
-            - name: HTTP_PORT
+            - name: EXAMPLE_SERVICE__HTTP_PORT
               value: "{{ .Values.service.httpPort }}"
-            - name: GRPC_PORT
+            - name: EXAMPLE_SERVICE__GRPC_PORT
               value: "{{ .Values.service.grpcPort }}"
+            - name: EXAMPLE_SERVICE__SERVICE_NAME
+              value: "{{ include "example-service.fullname" . }}"
+            - name: EXAMPLE_SERVICE__TRACING_ENDPOINT
+              value: "{{ .Values.traces.endpoint }}"
           {{- with .Values.livenessProbe}}
           livenessProbe:
             {{- toYaml . | nindent 12}}
