@@ -1,6 +1,6 @@
 [package]
 name = "example-service"
-version = "0.1.1-rc41"
+version = "0.1.1-rc43"
 edition = "2021"
 
 [dependencies]
