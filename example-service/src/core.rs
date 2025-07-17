@@ -1,6 +1,5 @@
 use crate::clients::{Client, ClientError};
 use crate::stores::{Store, StoreError};
-use metrics::{counter, gauge};
 use rand::random_range;
 use std::error::Error;
 use std::fmt::Debug;
@@ -63,10 +62,15 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(())
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(fields(component = "Core", method = "get_word"))]
     pub async fn get_word(&self, word: String) -> Result<String, CoreError<S::E, C::E>> {
-        info!("Getting word {0}...", word);
-        counter!("get_word_num_call").increment(1);
+        info!(
+            component = "Core",
+            method = "get_word",
+            monotonic_counter.num_call = 1_u64,
+            "Getting word {0}...",
+            word,
+        );
 
         Ok(self
             .store
@@ -81,10 +85,16 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(fields(component = "Core", method = "add_word"))]
     pub async fn add_word(&mut self, word: String) -> Result<(), CoreError<S::E, C::E>> {
-        info!("Adding word {0}...", word);
-        counter!("add_word_num_call").increment(1);
+        info!(
+            component = "Core",
+            method = "add_word",
+            monotonic_counter.num_call = 1_u64,
+            "Adding word {0}...",
+            word,
+        );
+
         Ok(self
             .store
             .add_word(word.clone())
@@ -98,10 +108,16 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(fields(component = "Core", method = "delete_word"))]
     pub async fn delete_word(&mut self, word: String) -> Result<(), CoreError<S::E, C::E>> {
-        info!("Deleting word {0}...", word);
-        counter!("delete_word_num_call").increment(1);
+        info!(
+            component = "Core",
+            method = "delete_word",
+            monotonic_counter.num_call = 1_u64,
+            "Deleting word {0}...",
+            word,
+        );
+
         Ok(self
             .store
             .remove_word(word.clone())
@@ -115,10 +131,14 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(fields(component = "Core", method = "random_word"))]
     pub async fn random_word(&self) -> Result<String, CoreError<S::E, C::E>> {
-        info!("Getting random word...");
-        counter!("random_word_num_call").increment(1);
+        info!(
+            component = "Core",
+            method = "random_word",
+            monotonic_counter.num_call = 1_u64,
+            "Getting random word..."
+        );
 
         let random_word = self.select_random_word().await?;
 
@@ -127,19 +147,20 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(random_word)
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(fields(component = "Core", method = "chain"))]
     pub async fn chain(
         &self,
         chain: Vec<String>,
         count: u32,
     ) -> Result<Vec<String>, CoreError<S::E, C::E>> {
-        counter!("chain_word_num_call").increment(1);
-        gauge!("chain_word_count").set(count);
         let random_word = self.select_random_word().await?;
-
         info!(
-            "Adding word {0} to the chain... Remaining count: {1}",
-            random_word, count
+            component = "Core",
+            method = "chain",
+            histogram.chain_count = count,
+            monotonic_counter.num_call = 1_u64,
+            "Adding word {0} to the chain...",
+            random_word,
         );
 
         let mut new_chain = chain.clone();
@@ -157,7 +178,7 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(new_chain)
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(fields(component = "Core", method = "select_random_word"))]
     async fn select_random_word(&self) -> Result<String, CoreError<S::E, C::E>> {
         Ok(self
             .store
@@ -172,7 +193,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(fields(component = "Core", method = "chain_with_random_service"))]
     async fn chain_with_random_service(
         &self,
         chain: Vec<String>,

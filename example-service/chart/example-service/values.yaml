@@ -62,21 +62,16 @@ service:
   grpcPort: 50051
 
 traces:
-  # -- Enable/Disable traces generation
-  enabled: true
   # -- Endpoint that traces are sent to
   endpoint: ""
+  # -- Ratio of sampled traces (0.0 - 1.0)
+  sampleRatio: 1.0
 
 metrics:
-  # -- Enable/Disable metrics service endpoint
-  enabled: true
-  # -- This sets the metrics ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 9001
-  # -- Set the metrics endpoint that prometheus will scrape
-  endpoint: /metrics
-  serviceMonitor:
-    # -- Enable/Disable creation of a prometheus serviceMonitor
-    enabled: true
+  # -- Endpoint that metrics are sent to
+  endpoint: ""
+  # -- Interval at which metrics are pushed to the endpoint (in seconds)
+  pushInterval: 5
 
 ingress:
   # -- Enable/Disable Ingress

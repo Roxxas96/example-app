@@ -58,6 +58,7 @@ impl Client for GrpcClient {
         Ok(())
     }
 
+    #[tracing::instrument(fields(component = "Grpc Client", method = "chain"))]
     async fn chain(
         &mut self,
         word_chain: Vec<String>,

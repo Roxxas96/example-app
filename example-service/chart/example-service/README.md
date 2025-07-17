@@ -33,10 +33,8 @@ Helm chart to deploy the example-service rust application
 | ingress.hosts | list | `[{"host":"chart-example.local","paths":[{"path":"/","pathType":"ImplementationSpecific"}]}]` | Hosts that will be served by the ingress |
 | ingress.tls | list | `[]` | TLS configuration for the ingress |
 | livenessProbe | object | `{"httpGet":{"path":"/health","port":"http"}}` | This is to set up the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ |
-| metrics.enabled | bool | `true` | Enable/Disable metrics service endpoint |
-| metrics.endpoint | string | `"/metrics"` | Set the metrics endpoint that prometheus will scrape |
-| metrics.port | int | `9001` | This sets the metrics ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports |
-| metrics.serviceMonitor.enabled | bool | `true` | Enable/Disable creation of a prometheus serviceMonitor |
+| metrics.endpoint | string | `""` | Endpoint that metrics are sent to |
+| metrics.pushInterval | int | `5` | Interval at which metrics are pushed to the endpoint (in seconds) |
 | nameOverride | string | `""` | This is to override the chart name. |
 | nodeSelector | object | `{}` |  |
 | podAnnotations | object | `{}` | This is for setting Kubernetes Annotations to a Pod. For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ |
@@ -59,8 +57,8 @@ Helm chart to deploy the example-service rust application
 | serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template |
 | tolerations | list | `[]` |  |
-| traces.enabled | bool | `true` | Enable/Disable traces generation |
 | traces.endpoint | string | `""` | Endpoint that traces are sent to |
+| traces.sampleRatio | float | `1` | Ratio of sampled traces (0.0 - 1.0) |
 | volumeMounts | list | `[]` | Additional volumeMounts on the output Deployment definition. |
 | volumes | list | `[]` | Additional volumes on the output Deployment definition. |
 

@@ -95,11 +95,13 @@ services:
       retries: 3
       start_period: 5s
   prometheus:
-    image: bitnami/prometheus:2.5.0
+    image: bitnami/prometheus:3.5.0
     ports:
       - 9090:9090
     volumes:
-      - ./prometheus.yaml:/opt/bitnami/prometheus/conf/prometheus.yml
+      - ./prometheus.yaml:/opt/bitnami/prometheus/prometheus.yml
+    command:
+      - --web.enable-otlp-receiver
   jaeger:
     image: jaegertracing/all-in-one:1.71.0
     ports:

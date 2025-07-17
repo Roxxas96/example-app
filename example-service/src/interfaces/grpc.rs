@@ -49,7 +49,7 @@ impl<S: Store, C: Client> GrpcInterface<S, C> {
 
 #[tonic::async_trait]
 impl<S: Store, C: Client> WordService for GrpcInterface<S, C> {
-    #[tracing::instrument]
+    #[tracing::instrument(fields(component = "Grpc Interface", method = "chain"))]
     async fn chain(
         &self,
         request: Request<ChainRequest>,

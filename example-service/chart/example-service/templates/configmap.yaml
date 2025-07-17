@@ -12,7 +12,23 @@ data:
     {{- else }}
   RUST_BACKTRACE: "0"
     {{- end }}
+
     {{- if .connectedServices }}
-  EXAMPLE_SERVICE__CONNECTED_SERVICES: {{ .connectedServices | join "," | quote }}
+  EXAMPLE_SERVICE_CONNECTED_SERVICES: {{ .connectedServices | join "," | quote }}
     {{- end }}
+  {{- end }}
+
+  OTEL_SERVICE_NAME: {{ include "example-service.fullname" . }}
+  OTEL_RESOURCE_ATTRIBUTES: env=kubernetes
+
+  {{- with .Values.metrics }}
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: {{ .endpoint | quote }}
+  MONITORING_METRICS_PUSH_INTERVAL: {{ .pushInterval | quote }}
+  OTEL_EXPORTER_OTLP_METRICS_PROTOCOL: "http/protobuf"
+  {{- end }}
+
+  {{- with .Values.traces }}
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: {{ .endpoint | quote }}
+  OTEL_TRACES_SAMPLER_ARG: {{ .sampleRatio | quote }}
+  OTEL_TRACES_SAMPLER: traceidratio
   {{- end }}
