@@ -69,11 +69,7 @@ struct MonitoringConfig {
 
 fn init_config() -> Result<(ExampleAppConfig, MonitoringConfig), ExampleAppError> {
     let app_config = Config::builder()
-        .add_source(
-            config::Environment::default()
-                .prefix("EXAMPLE_SERVICE")
-                .separator("_"),
-        )
+        .add_source(config::Environment::default().prefix("EXAMPLE_SERVICE"))
         .set_default("http_port", 3001)
         .map_err(ExampleAppError::ConfigError)?
         .set_default("grpc_port", 50051)
@@ -86,11 +82,7 @@ fn init_config() -> Result<(ExampleAppConfig, MonitoringConfig), ExampleAppError
         .map_err(ExampleAppError::ConfigError)?;
 
     let monitoring_config = Config::builder()
-        .add_source(
-            config::Environment::default()
-                .prefix("MONITORING")
-                .separator("_"),
-        )
+        .add_source(config::Environment::default().prefix("MONITORING"))
         .set_default("metrics_push_interval", 5)
         .map_err(ExampleAppError::ConfigError)?
         .build()
