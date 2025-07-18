@@ -19,9 +19,7 @@ Helm chart to deploy the example-service rust application
 | autoscaling.maxReplicas | int | `100` | Maximum number of replicas to maintain. |
 | autoscaling.minReplicas | int | `1` | Minimum number of replicas to maintain. |
 | autoscaling.targetCPUUtilizationPercentage | int | `80` | Target CPU utilization percentage to scale pods. This is a value between 0 and 100. |
-| config.backtrace | bool | `true` | Decide whether backtrace is displayed when failing |
 | config.connectedServices | list | `[]` | Urls to connected services via gRPC |
-| config.logLevel | string | `"info"` | Log level of the application |
 | fullnameOverride | string | `""` |  |
 | image.pullPolicy | string | `"IfNotPresent"` | This sets the pull policy for images. |
 | image.repository | string | `"harbor.internal.roxxas96.net/example-app/example-service"` |  |
@@ -33,6 +31,9 @@ Helm chart to deploy the example-service rust application
 | ingress.hosts | list | `[{"host":"chart-example.local","paths":[{"path":"/","pathType":"ImplementationSpecific"}]}]` | Hosts that will be served by the ingress |
 | ingress.tls | list | `[]` | TLS configuration for the ingress |
 | livenessProbe | object | `{"httpGet":{"path":"/health","port":"http"}}` | This is to set up the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ |
+| logs.backtrace | bool | `true` | Decide whether backtrace is displayed when failing |
+| logs.endpoint | string | `""` | Endpoint that logs are sent to |
+| logs.level | string | `"info"` | Log level of the application |
 | metrics.endpoint | string | `""` | Endpoint that metrics are sent to |
 | metrics.pushInterval | int | `5` | Interval at which metrics are pushed to the endpoint (in seconds) |
 | nameOverride | string | `""` | This is to override the chart name. |

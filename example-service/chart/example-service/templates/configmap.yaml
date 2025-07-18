@@ -6,13 +6,6 @@ metadata:
     {{- include "example-service.labels" . | nindent 4 }}
 data:
   {{- with .Values.config }}
-  RUST_LOG: {{ .logLevel | quote }}
-    {{- if .backtrace }}
-  RUST_BACKTRACE: "1"
-    {{- else }}
-  RUST_BACKTRACE: "0"
-    {{- end }}
-
     {{- if .connectedServices }}
   EXAMPLE_SERVICE_CONNECTED_SERVICES: {{ .connectedServices | join "," | quote }}
     {{- end }}
@@ -20,6 +13,17 @@ data:
 
   OTEL_SERVICE_NAME: {{ include "example-service.fullname" . }}
   OTEL_RESOURCE_ATTRIBUTES: env=kubernetes
+
+  {{- with .Values.logs }}
+  RUST_LOG: {{ .level | quote }}
+    {{- if .backtrace }}
+  RUST_BACKTRACE: "1"
+    {{- else }}
+  RUST_BACKTRACE: "0"
+    {{- end }}
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: {{ .endpoint | quote }}
+  OTEL_EXPORTER_OTLP_LOGS_PROTOCOL: "http/protobuf"
+  {{- end }}
 
   {{- with .Values.metrics }}
   OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: {{ .endpoint | quote }}

@@ -18,10 +18,26 @@ fullnameOverride: ""
 config:
   # -- Urls to connected services via gRPC
   connectedServices: []
+
+logs:
+  # -- Endpoint that logs are sent to
+  endpoint: ""
   # -- Log level of the application
-  logLevel: info
+  level: info
   # -- Decide whether backtrace is displayed when failing
   backtrace: true
+
+traces:
+  # -- Endpoint that traces are sent to
+  endpoint: ""
+  # -- Ratio of sampled traces (0.0 - 1.0)
+  sampleRatio: 1.0
+
+metrics:
+  # -- Endpoint that metrics are sent to
+  endpoint: ""
+  # -- Interval at which metrics are pushed to the endpoint (in seconds)
+  pushInterval: 5
 
 serviceAccount:
   # -- Specifies whether a service account should be created
@@ -60,18 +76,6 @@ service:
   httpPort: 3001
   # -- This sets the grpc ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   grpcPort: 50051
-
-traces:
-  # -- Endpoint that traces are sent to
-  endpoint: ""
-  # -- Ratio of sampled traces (0.0 - 1.0)
-  sampleRatio: 1.0
-
-metrics:
-  # -- Endpoint that metrics are sent to
-  endpoint: ""
-  # -- Interval at which metrics are pushed to the endpoint (in seconds)
-  pushInterval: 5
 
 ingress:
   # -- Enable/Disable Ingress

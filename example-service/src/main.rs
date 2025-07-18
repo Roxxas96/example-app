@@ -13,9 +13,11 @@ use interfaces::{
     http::{HttpInterface, HttpInterfaceError},
 };
 use opentelemetry::global;
+use opentelemetry::logs::LoggerProvider;
 use opentelemetry::metrics::MeterProvider;
 use opentelemetry::propagation::TextMapCompositePropagator;
 use opentelemetry::trace::TracerProvider;
+use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 use opentelemetry_sdk::propagation::{BaggagePropagator, TraceContextPropagator};
 use opentelemetry_sdk::trace::SdkTracerProvider;
@@ -32,8 +34,8 @@ use tracing::{debug, error, info};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::filter::Directive;
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::prelude::*;
 use tracing_subscriber::Registry;
+use tracing_subscriber::{prelude::*, EnvFilter};
 
 #[derive(Error, Debug)]
 enum ExampleAppError {
@@ -57,6 +59,8 @@ enum ExampleAppError {
     SpanExporterBuildError(#[source] opentelemetry_otlp::ExporterBuildError),
     #[error("Error when building OpenTelemetry metrics exporter")]
     MetricsExporterBuildError(#[source] opentelemetry_otlp::ExporterBuildError),
+    #[error("Error when building OpenTelemetry metrics exporter")]
+    LogExporterBuildError(#[source] opentelemetry_otlp::ExporterBuildError),
     #[error("Error when init tracing registry")]
     TracingRegistryInitError(#[source] tracing_subscriber::util::TryInitError),
 }
@@ -102,6 +106,7 @@ fn init_config() -> Result<(ExampleAppConfig, MonitoringConfig), ExampleAppError
 pub struct OtelGuard {
     meter_provider: SdkMeterProvider,
     tracer_provider: SdkTracerProvider,
+    logger_provider: SdkLoggerProvider,
 }
 
 impl OtelGuard {
@@ -111,6 +116,9 @@ impl OtelGuard {
     pub fn tracer_provider(&self) -> &impl TracerProvider {
         &self.tracer_provider
     }
+    pub fn logger_provider(&self) -> &impl LoggerProvider {
+        &self.logger_provider
+    }
 }
 
 impl Drop for OtelGuard {
@@ -119,17 +127,19 @@ impl Drop for OtelGuard {
         let _ = self.meter_provider.shutdown();
         let _ = self.tracer_provider.force_flush();
         let _ = self.tracer_provider.shutdown();
+        let _ = self.logger_provider.force_flush();
+        let _ = self.logger_provider.shutdown();
     }
 }
 
 fn init_tracer_provider() -> Result<SdkTracerProvider, ExampleAppError> {
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .build()
+        .map_err(ExampleAppError::SpanExporterBuildError)?;
+
     let tracer_provider = SdkTracerProvider::builder()
-        .with_batch_exporter(
-            opentelemetry_otlp::SpanExporter::builder()
-                .with_tonic()
-                .build()
-                .map_err(ExampleAppError::SpanExporterBuildError)?,
-        )
+        .with_batch_exporter(exporter)
         .build();
 
     global::set_tracer_provider(tracer_provider.clone());
@@ -161,11 +171,32 @@ fn init_meter_provider(config: &MonitoringConfig) -> Result<SdkMeterProvider, Ex
     Ok(meter_provider)
 }
 
+fn init_logger_provider() -> Result<SdkLoggerProvider, ExampleAppError> {
+    let exporter = opentelemetry_otlp::LogExporter::builder()
+        .with_http()
+        .build()
+        .map_err(ExampleAppError::LogExporterBuildError)?;
+
+    let logger_provider = SdkLoggerProvider::builder()
+        .with_batch_exporter(exporter)
+        .build();
+
+    Ok(logger_provider)
+}
+
 fn init_tracing(config: &MonitoringConfig) -> Result<OtelGuard, ExampleAppError> {
     let tracer_provider = init_tracer_provider()?;
     let tracer = tracer_provider.tracer("readme_example");
 
     let meter_provider = init_meter_provider(config)?;
+
+    let logger_provider = init_logger_provider()?;
+    let log_filter_otel = EnvFilter::from_default_env()
+        .add_directive("hyper=off".parse().unwrap())
+        .add_directive("opentelemetry=off".parse().unwrap())
+        .add_directive("tonic=off".parse().unwrap())
+        .add_directive("h2=off".parse().unwrap())
+        .add_directive("reqwest=off".parse().unwrap());
 
     Registry::default()
         .with(
@@ -175,12 +206,19 @@ fn init_tracing(config: &MonitoringConfig) -> Result<OtelGuard, ExampleAppError>
         .with(tracing_subscriber::fmt::Layer::default())
         .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .with(MetricsLayer::new(meter_provider.clone()))
+        .with(
+            opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge::new(
+                &logger_provider,
+            )
+            .with_filter(log_filter_otel),
+        )
         .try_init()
         .map_err(ExampleAppError::TracingRegistryInitError)?;
 
     Ok(OtelGuard {
         meter_provider,
         tracer_provider,
+        logger_provider,
     })
 }
 
