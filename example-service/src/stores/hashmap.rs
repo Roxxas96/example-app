@@ -57,7 +57,7 @@ impl HashmapStore {
 impl Store for HashmapStore {
     type E = HashmapStoreError;
 
-    #[tracing::instrument(fields(component = "Hashmap Store", method = "get_word"))]
+    #[tracing::instrument(fields(component = "Hashmap Store"), skip(self))]
     async fn get_word(&self, word: String) -> Result<String, StoreError<HashmapStoreError>> {
         trace!("Getting word {:?} from hashmap store...", word);
 
@@ -70,7 +70,7 @@ impl Store for HashmapStore {
             .to_string())
     }
 
-    #[tracing::instrument(fields(component = "Hashmap Store", method = "get_random_word"))]
+    #[tracing::instrument(fields(component = "Hashmap Store"), skip(self))]
     async fn get_random_word(&self) -> Result<String, StoreError<HashmapStoreError>> {
         trace!("Getting a random word from hashmap store...");
 
@@ -93,7 +93,7 @@ impl Store for HashmapStore {
             .to_string())
     }
 
-    #[tracing::instrument(fields(component = "Hashmap Store", method = "add_word"))]
+    #[tracing::instrument(fields(component = "Hashmap Store"), skip(self))]
     async fn add_word(&mut self, word: String) -> Result<(), StoreError<HashmapStoreError>> {
         trace!("Adding word {:?} to hashmap store...", word);
 
@@ -106,7 +106,7 @@ impl Store for HashmapStore {
         Ok(())
     }
 
-    #[tracing::instrument(fields(component = "Hashmap Store", method = "remove_word"))]
+    #[tracing::instrument(fields(component = "Hashmap Store"), skip(self))]
     async fn remove_word(&mut self, word: String) -> Result<(), StoreError<HashmapStoreError>> {
         trace!("Removing word {:?} from hashmap store...", word);
 

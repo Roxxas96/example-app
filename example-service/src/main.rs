@@ -13,18 +13,24 @@ use interfaces::{
     http::{HttpInterface, HttpInterfaceError},
 };
 use opentelemetry::global;
-use opentelemetry::trace::TracerProvider as _;
+use opentelemetry::metrics::MeterProvider;
+use opentelemetry::propagation::TextMapCompositePropagator;
+use opentelemetry::trace::TracerProvider;
 use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
+use opentelemetry_sdk::propagation::{BaggagePropagator, TraceContextPropagator};
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
+use std::str::FromStr;
 use std::{net::AddrParseError, sync::Arc};
 use stores::hashmap::{HashmapStore, HashmapStoreError};
 use thiserror::Error;
 use tokio::sync::RwLock;
 use tonic::transport::Server;
+use tonic_tracing_opentelemetry::middleware::{filters, server};
 use tracing::{debug, error, info};
 use tracing_opentelemetry::MetricsLayer;
+use tracing_subscriber::filter::Directive;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::Registry;
@@ -93,15 +99,46 @@ fn init_config() -> Result<(ExampleAppConfig, MonitoringConfig), ExampleAppError
     Ok((app_config, monitoring_config))
 }
 
+pub struct OtelGuard {
+    meter_provider: SdkMeterProvider,
+    tracer_provider: SdkTracerProvider,
+}
+
+impl OtelGuard {
+    pub fn meter_provider(&self) -> &impl MeterProvider {
+        &self.meter_provider
+    }
+    pub fn tracer_provider(&self) -> &impl TracerProvider {
+        &self.tracer_provider
+    }
+}
+
+impl Drop for OtelGuard {
+    fn drop(&mut self) {
+        let _ = self.meter_provider.force_flush();
+        let _ = self.meter_provider.shutdown();
+        let _ = self.tracer_provider.force_flush();
+        let _ = self.tracer_provider.shutdown();
+    }
+}
+
 fn init_tracer_provider() -> Result<SdkTracerProvider, ExampleAppError> {
-    Ok(SdkTracerProvider::builder()
+    let tracer_provider = SdkTracerProvider::builder()
         .with_batch_exporter(
             opentelemetry_otlp::SpanExporter::builder()
                 .with_tonic()
                 .build()
                 .map_err(ExampleAppError::SpanExporterBuildError)?,
         )
-        .build())
+        .build();
+
+    global::set_tracer_provider(tracer_provider.clone());
+    global::set_text_map_propagator(TextMapCompositePropagator::new(vec![
+        Box::new(TraceContextPropagator::default()),
+        Box::new(BaggagePropagator::default()),
+    ]));
+
+    Ok(tracer_provider)
 }
 
 fn init_meter_provider(config: &MonitoringConfig) -> Result<SdkMeterProvider, ExampleAppError> {
@@ -124,20 +161,27 @@ fn init_meter_provider(config: &MonitoringConfig) -> Result<SdkMeterProvider, Ex
     Ok(meter_provider)
 }
 
-fn init_tracing(config: &MonitoringConfig) -> Result<(), ExampleAppError> {
+fn init_tracing(config: &MonitoringConfig) -> Result<OtelGuard, ExampleAppError> {
     let tracer_provider = init_tracer_provider()?;
     let tracer = tracer_provider.tracer("readme_example");
 
     let meter_provider = init_meter_provider(config)?;
 
     Registry::default()
-        .with(tracing_subscriber::filter::EnvFilter::from_default_env())
+        .with(
+            tracing_subscriber::filter::EnvFilter::from_default_env()
+                .add_directive(Directive::from_str("otel::tracing=trace").unwrap()),
+        )
         .with(tracing_subscriber::fmt::Layer::default())
         .with(tracing_opentelemetry::layer().with_tracer(tracer))
-        .with(MetricsLayer::new(meter_provider))
+        .with(MetricsLayer::new(meter_provider.clone()))
         .try_init()
         .map_err(ExampleAppError::TracingRegistryInitError)?;
-    Ok(())
+
+    Ok(OtelGuard {
+        meter_provider,
+        tracer_provider,
+    })
 }
 
 async fn init_store() -> Result<impl Store, ExampleAppError> {
@@ -208,6 +252,7 @@ fn init_grpc_interface(
     Ok(async move {
         info!("Starting gRPC interface on address {0}...", grpc_url);
         Server::builder()
+            .layer(server::OtelGrpcLayer::default().filter(filters::reject_healthcheck))
             .add_service(WordServiceServer::new(grpc_interface))
             .serve(grpc_url)
             .await
@@ -224,7 +269,7 @@ fn init_grpc_interface(
 async fn main() -> Result<(), ExampleAppError> {
     let (app_config, monitoring_config) = init_config()?;
 
-    init_tracing(&monitoring_config)?;
+    let _guard = init_tracing(&monitoring_config)?;
 
     info!("Starting example service...");
 

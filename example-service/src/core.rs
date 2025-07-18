@@ -62,7 +62,7 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(())
     }
 
-    #[tracing::instrument(fields(component = "Core", method = "get_word"))]
+    #[tracing::instrument(fields(component = "Core"), skip(self))]
     pub async fn get_word(&self, word: String) -> Result<String, CoreError<S::E, C::E>> {
         info!(
             component = "Core",
@@ -85,7 +85,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
-    #[tracing::instrument(fields(component = "Core", method = "add_word"))]
+    #[tracing::instrument(fields(component = "Core"), skip(self))]
     pub async fn add_word(&mut self, word: String) -> Result<(), CoreError<S::E, C::E>> {
         info!(
             component = "Core",
@@ -108,7 +108,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
-    #[tracing::instrument(fields(component = "Core", method = "delete_word"))]
+    #[tracing::instrument(fields(component = "Core"), skip(self))]
     pub async fn delete_word(&mut self, word: String) -> Result<(), CoreError<S::E, C::E>> {
         info!(
             component = "Core",
@@ -131,7 +131,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
-    #[tracing::instrument(fields(component = "Core", method = "random_word"))]
+    #[tracing::instrument(fields(component = "Core"), skip(self))]
     pub async fn random_word(&self) -> Result<String, CoreError<S::E, C::E>> {
         info!(
             component = "Core",
@@ -147,7 +147,7 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(random_word)
     }
 
-    #[tracing::instrument(fields(component = "Core", method = "chain"))]
+    #[tracing::instrument(fields(component = "Core"), skip(self))]
     pub async fn chain(
         &self,
         chain: Vec<String>,
@@ -178,7 +178,7 @@ impl<S: Store, C: Client> Core<S, C> {
         Ok(new_chain)
     }
 
-    #[tracing::instrument(fields(component = "Core", method = "select_random_word"))]
+    #[tracing::instrument(fields(component = "Core"), skip(self))]
     async fn select_random_word(&self) -> Result<String, CoreError<S::E, C::E>> {
         Ok(self
             .store
@@ -193,7 +193,7 @@ impl<S: Store, C: Client> Core<S, C> {
             })?)
     }
 
-    #[tracing::instrument(fields(component = "Core", method = "chain_with_random_service"))]
+    #[tracing::instrument(fields(component = "Core"), skip(self))]
     async fn chain_with_random_service(
         &self,
         chain: Vec<String>,

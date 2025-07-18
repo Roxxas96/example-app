@@ -2,9 +2,12 @@ use std::time::Duration;
 
 use crate::clients::{Client, ClientError};
 use async_recursion::async_recursion;
+use axum::http::uri::InvalidUri;
 use thiserror::Error;
 use tonic::async_trait;
 use tonic::transport::Channel;
+use tonic_tracing_opentelemetry::middleware::client::{OtelGrpcLayer, OtelGrpcService};
+use tower::ServiceBuilder;
 use tracing::{trace, warn};
 use word::{word_service_client::WordServiceClient, ChainRequest, HealthRequest};
 
@@ -22,11 +25,13 @@ pub enum GrpcClientError {
         source: tonic::transport::Error,
         address: String,
     },
+    #[error("Invalid Uri when connecting to the server")]
+    InvalidUri(#[source] InvalidUri),
 }
 
 #[derive(Clone, Debug)]
 pub struct GrpcClient {
-    client: WordServiceClient<Channel>,
+    client: WordServiceClient<OtelGrpcService<Channel>>,
     service_url: String,
 }
 
@@ -58,7 +63,7 @@ impl Client for GrpcClient {
         Ok(())
     }
 
-    #[tracing::instrument(fields(component = "Grpc Client", method = "chain"))]
+    #[tracing::instrument(fields(component = "Grpc Client"), skip(self))]
     async fn chain(
         &mut self,
         word_chain: Vec<String>,
@@ -88,9 +93,15 @@ impl Client for GrpcClient {
 async fn connect_to_client(
     service_url: String,
     retries: u8,
-) -> Result<WordServiceClient<Channel>, GrpcClientError> {
-    match WordServiceClient::connect(service_url.clone()).await {
-        Ok(client) => Ok(client),
+) -> Result<WordServiceClient<OtelGrpcService<Channel>>, GrpcClientError> {
+    match Channel::from_shared(service_url.clone())
+        .map_err(GrpcClientError::InvalidUri)?
+        .connect()
+        .await
+    {
+        Ok(channel) => Ok(WordServiceClient::new(
+            ServiceBuilder::new().layer(OtelGrpcLayer).service(channel),
+        )),
         Err(e) => {
             if retries > 0 {
                 warn!(

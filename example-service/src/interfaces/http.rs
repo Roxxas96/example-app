@@ -7,6 +7,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use axum_tracing_opentelemetry::middleware::{OtelAxumLayer, OtelInResponseLayer};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tower_http::trace::TraceLayer;
@@ -99,6 +100,8 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
             .route("/ready", get(Self::ready_check))
             .with_state(self.core.clone())
             .layer(TraceLayer::new_for_http())
+            .layer(OtelInResponseLayer::default())
+            .layer(OtelAxumLayer::default())
     }
 
     async fn health_check(State(state): State<Core<S, C>>) -> Result<(), (StatusCode, String)> {
@@ -114,7 +117,7 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
         })
     }
 
-    #[tracing::instrument(fields(component = "Http Interface", method = "add_word"))]
+    #[tracing::instrument(fields(component = "Http Interface"), skip(state))]
     async fn add_word(
         State(mut state): State<Core<S, C>>,
         Json(payload): Json<AddWordRequest>,
@@ -130,7 +133,7 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
             .map(|_| StatusCode::CREATED)
     }
 
-    #[tracing::instrument(fields(component = "Http Interface", method = "get_word"))]
+    #[tracing::instrument(fields(component = "Http Interface"), skip(state))]
     async fn get_word(
         State(state): State<Core<S, C>>,
         Path(word): Path<String>,
@@ -146,7 +149,7 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
             .map(|word| (StatusCode::OK, Json(GetWordResponse { word })))
     }
 
-    #[tracing::instrument(fields(component = "Http Interface", method = "remove_word"))]
+    #[tracing::instrument(fields(component = "Http Interface"), skip(state))]
     async fn remove_word(
         State(mut state): State<Core<S, C>>,
         Json(payload): Json<RemoveWordRequest>,
@@ -165,7 +168,7 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
             .map(|_| StatusCode::OK)
     }
 
-    #[tracing::instrument(fields(component = "Http Interface", method = "random_word"))]
+    #[tracing::instrument(fields(component = "Http Interface"), skip(state))]
     async fn random_word(
         State(state): State<Core<S, C>>,
     ) -> Result<(StatusCode, Json<RandomWordResponse>), (StatusCode, String)> {
@@ -182,7 +185,7 @@ impl<S: Store, C: Client> HttpInterface<S, C> {
             .map(|word| (StatusCode::OK, Json(RandomWordResponse { word })))
     }
 
-    #[tracing::instrument(fields(component = "Http Interface", method = "start_chain"))]
+    #[tracing::instrument(fields(component = "Http Interface"), skip(state))]
     async fn start_chain(
         State(state): State<Core<S, C>>,
         Json(payload): Json<ChainRequest>,

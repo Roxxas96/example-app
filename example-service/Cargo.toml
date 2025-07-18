@@ -6,13 +6,14 @@ edition = "2021"
 [dependencies]
 axum = { version = "0.8.4" }
 serde = { version = "1.0.219", features = ["derive"] }
+tower = { version = "0.5.2" }
 tower-http = { version = "0.6.2", features = ["trace"] }
 tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt", "registry"] }
 thiserror = { version = "2.0.12" }
 rand = { version = "0.9.1" }
-tonic = { version = "0.12.3" }
+tonic = { version = "0.13.1" }
 prost = { version = "0.13.5" }
 config = { version = "0.15.11" }
 async-recursion = { version = "1.1.1" }
@@ -20,6 +21,8 @@ tracing-opentelemetry = "0.31"
 opentelemetry = { version = "0.30", features = ["trace", "metrics"] }
 opentelemetry-otlp = { version = "0.30", features = ["grpc-tonic", "trace"] }
 opentelemetry_sdk = { version = "0.30.0" }
+tonic-tracing-opentelemetry = { version = "0.29.0" }
+axum-tracing-opentelemetry = { version = "0.29.0" }
 
 [build-dependencies]
-tonic-build = { version = "0.12.3" }
+tonic-build = { version = "0.13.1" }
