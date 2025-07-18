@@ -19,6 +19,8 @@ spec:
       values: |
         config:
           connectedServices: http://example-service-1:50051,http://example-service-3:50051,http://example-service-4:50051,http://example-service-5:50051
+        logs:
+          endpoint: http://grafana-loki-ingester.grafana-loki:3100/otlp/v1/logs
         traces:
           endpoint: http://jaeger-inmemory-instance-collector.open-telemetry:4317
         metrics:
