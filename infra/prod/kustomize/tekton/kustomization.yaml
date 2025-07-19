@@ -12,6 +12,7 @@ resources:
   - example-app-repo.sealedsecret.yaml
   - docker-repo.sealedsecret.yaml
   - ingress.yaml
+  - cleanup-runs.yaml
 
 patches:
   - path: namespace.patch.yaml

@@ -12,6 +12,8 @@ repos:
       - id: check-merge-conflict
       - id: check-yaml
         exclude: /templates/
+        args:
+          - --allow-multiple-documents
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: trailing-whitespace
