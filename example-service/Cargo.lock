@@ -352,6 +352,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-appender-tracing",
  "opentelemetry-otlp",
+ "opentelemetry-resource-detectors",
  "opentelemetry_sdk",
  "prost",
  "rand",
@@ -998,6 +999,23 @@ dependencies = [
  "prost",
  "tonic",
 ]
+
+[[package]]
+name = "opentelemetry-resource-detectors"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a44e076f07fa3d76e741991f4f7d3ecbac0eed8521ced491fbdf8db77d024cf"
+dependencies = [
+ "opentelemetry",
+ "opentelemetry-semantic-conventions",
+ "opentelemetry_sdk",
+]
+
+[[package]]
+name = "opentelemetry-semantic-conventions"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83d059a296a47436748557a353c5e6c5705b9470ef6c95cfc52c21a8814ddac2"
 
 [[package]]
 name = "opentelemetry_sdk"

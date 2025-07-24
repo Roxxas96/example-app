@@ -17,10 +17,15 @@ use opentelemetry::logs::LoggerProvider;
 use opentelemetry::metrics::MeterProvider;
 use opentelemetry::propagation::TextMapCompositePropagator;
 use opentelemetry::trace::TracerProvider;
+use opentelemetry_resource_detectors::{
+    K8sResourceDetector, OsResourceDetector, ProcessResourceDetector,
+};
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 use opentelemetry_sdk::propagation::{BaggagePropagator, TraceContextPropagator};
+use opentelemetry_sdk::resource::{EnvResourceDetector, SdkProvidedResourceDetector};
 use opentelemetry_sdk::trace::SdkTracerProvider;
+use opentelemetry_sdk::Resource;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::str::FromStr;
@@ -132,6 +137,15 @@ impl Drop for OtelGuard {
     }
 }
 
+fn init_resource() -> Resource {
+    Resource::builder()
+        .with_detector(Box::new(SdkProvidedResourceDetector))
+        .with_detector(Box::new(K8sResourceDetector))
+        .with_detector(Box::new(OsResourceDetector))
+        .with_detector(Box::new(ProcessResourceDetector))
+        .build()
+}
+
 fn init_tracer_provider() -> Result<SdkTracerProvider, ExampleAppError> {
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
@@ -140,6 +154,7 @@ fn init_tracer_provider() -> Result<SdkTracerProvider, ExampleAppError> {
 
     let tracer_provider = SdkTracerProvider::builder()
         .with_batch_exporter(exporter)
+        .with_resource(init_resource())
         .build();
 
     global::set_tracer_provider(tracer_provider.clone());
@@ -164,7 +179,10 @@ fn init_meter_provider(config: &MonitoringConfig) -> Result<SdkMeterProvider, Ex
         ))
         .build();
 
-    let meter_provider = SdkMeterProvider::builder().with_reader(reader).build();
+    let meter_provider = SdkMeterProvider::builder()
+        .with_reader(reader)
+        .with_resource(init_resource())
+        .build();
 
     global::set_meter_provider(meter_provider.clone());
 
@@ -178,6 +196,7 @@ fn init_logger_provider() -> Result<SdkLoggerProvider, ExampleAppError> {
         .map_err(ExampleAppError::LogExporterBuildError)?;
 
     let logger_provider = SdkLoggerProvider::builder()
+        .with_resource(init_resource())
         .with_batch_exporter(exporter)
         .build();
 
