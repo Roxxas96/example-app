@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jaeger-cassandra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: example-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: open-telemetry
+  source:
+    repoURL: registry-1.docker.io/bitnamicharts
+    targetRevision: "*.*.*"
+    chart: cassandra
+    helm:
+      values: |
+        cluster:
+          datacenter: jaeger_dc1

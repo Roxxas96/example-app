@@ -22,6 +22,6 @@ spec:
         logs:
           endpoint: http://grafana-loki-gateway.grafana-loki/otlp/v1/logs
         traces:
-          endpoint: http://jaeger-inmemory-instance-collector.open-telemetry:4317
+          endpoint: http://jaeger-collector.open-telemetry:4317
         metrics:
           endpoint: http://kube-prometheus-stack-prometheus.kube-prometheus:9090/api/v1/otlp/v1/metrics

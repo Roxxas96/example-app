@@ -1,10 +1,15 @@
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
-  name: jaeger-inmemory-instance
-  namespace: open-telemetry
+  name: jaeger
 spec:
   image: jaegertracing/jaeger:2.8.0
+  env:
+    - name: CASSANDRA_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: jaeger-cassandra
+          key: cassandra-password
   ports:
     - name: jaeger
       port: 16686
@@ -18,12 +23,22 @@ spec:
     extensions:
       jaeger_query:
         storage:
-          traces: memstore
+          traces: cassandra_storage
       jaeger_storage:
         backends:
-          memstore:
-            memory:
-              max_traces: 100000
+          cassandra_storage:
+            cassandra:
+              schema:
+                keyspace: jaeger_tracing
+                create: true
+              connection:
+                auth:
+                  basic:
+                    username: cassandra
+                    password: "${env:CASSANDRA_PASSWORD}"
+                tls:
+                  insecure: true
+                servers: ["jaeger-cassandra:9042"]
     receivers:
       otlp:
         protocols:
@@ -33,4 +48,4 @@ spec:
             endpoint: 0.0.0.0:4318
     exporters:
       jaeger_storage_exporter:
-        trace_storage: memstore
+        trace_storage: cassandra_storage

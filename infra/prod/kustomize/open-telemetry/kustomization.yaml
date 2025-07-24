@@ -5,3 +5,12 @@ resources:
   - namespace.yaml
   - https://github.com/open-telemetry/opentelemetry-operator/releases/download/v0.129.1/opentelemetry-operator.yaml
   - jaeger-collector.yaml
+  - jaeger-database.yaml
+transformers:
+  - |-
+    apiVersion: builtin
+    kind: NamespaceTransformer
+    metadata:
+      name: notImportantHere
+      namespace: open-telemetry
+    unsetOnly: true
