@@ -2,6 +2,7 @@ use std::{error::Error, fmt::Debug};
 use thiserror::Error;
 use tonic::async_trait;
 
+pub mod amqp;
 pub mod grpc;
 
 #[derive(Error, Debug)]
@@ -11,13 +12,13 @@ pub enum ClientError<E: Error> {
     #[error("Service unavailable")]
     ServiceUnavailable,
     #[error("Internal client error: {0}")]
-    _InternalClientError(#[source] E),
+    InternalClientError(#[source] E),
     #[error("Internal server error")]
     InternalServerError,
 }
 
 #[async_trait]
-pub trait Client: Clone + Send + Sync + 'static + Debug {
+pub trait Client: Clone + Send + Sync + 'static {
     type E: Error;
 
     fn get_url(&self) -> String;
