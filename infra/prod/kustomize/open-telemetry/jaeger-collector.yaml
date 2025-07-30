@@ -10,6 +10,8 @@ spec:
         secretKeyRef:
           name: jaeger-cassandra
           key: cassandra-password
+    - name: SPAN_STORAGE_TTL
+      value: 240h
   ports:
     - name: jaeger
       port: 16686

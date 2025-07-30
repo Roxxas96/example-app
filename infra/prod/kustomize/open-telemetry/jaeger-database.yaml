@@ -17,3 +17,9 @@ spec:
       values: |
         cluster:
           datacenter: jaeger_dc1
+  ignoreDifferences:
+    - group: "*"
+      kind: Secret
+      name: jaeger-cassandra
+      jsonPointers:
+        - /data/cassandra-password
