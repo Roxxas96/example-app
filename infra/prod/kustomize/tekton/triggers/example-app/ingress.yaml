@@ -6,7 +6,7 @@ metadata:
     name: el-example-app-on-push
   annotations:
     external-dns.alpha.kubernetes.io/target: 95.90.150.138
-    cert-manager.io/cluster-issuer: external-prod
+    cert-manager.io/cluster-issuer: dns-prod
 spec:
   ingressClassName: nginx
   rules:
