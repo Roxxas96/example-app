@@ -25,7 +25,6 @@ tonic-tracing-opentelemetry = { version = "0.29.0" }
 axum-tracing-opentelemetry = { version = "0.29.0" }
 opentelemetry-appender-tracing = { version = "0.30.1" }
 opentelemetry-resource-detectors = { version = "0.9.0" }
-amqprs = { version = "2.1.2", features = ["traces"]}
 
 [build-dependencies]
 tonic-build = { version = "0.13.1" }

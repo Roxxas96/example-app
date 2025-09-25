@@ -27,32 +27,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "amqp_serde"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46af430da4849b906416235798be5d0b8ff07e478d9809f05a00f81eb9527781"
-dependencies = [
- "bytes",
- "serde",
- "serde_bytes",
-]
-
-[[package]]
-name = "amqprs"
-version = "2.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09eb9026b3fa8fde34b006d442ee9d41eabe31aeb036e46eefaec8dc3a537736"
-dependencies = [
- "amqp_serde",
- "async-trait",
- "bytes",
- "serde",
- "serde_bytes",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "anyhow"
 version = "1.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -371,7 +345,6 @@ dependencies = [
 name = "example-service"
 version = "0.1.1-rc65"
 dependencies = [
- "amqprs",
  "async-recursion",
  "axum",
  "axum-tracing-opentelemetry",
@@ -1450,15 +1423,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
 dependencies = [
  "serde_derive",
-]
-
-[[package]]
-name = "serde_bytes"
-version = "0.11.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8437fd221bde2d4ca316d61b90e337e9e702b3820b87d63caa9ba6c02bd06d96"
-dependencies = [
- "serde",
 ]
 
 [[package]]

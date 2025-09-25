@@ -3,15 +3,10 @@ mod core;
 mod interfaces;
 mod stores;
 
-use crate::clients::amqp::AmqpClient;
 use crate::clients::grpc::{GrpcClient, GrpcClientError};
 use crate::clients::Client;
 use crate::core::Core;
-use crate::interfaces::amqp::{AmqpInterface, AmqpInterfaceError};
 use crate::stores::Store;
-use amqprs::callbacks::DefaultConnectionCallback;
-use amqprs::channel::{Channel, QueueBindArguments, QueueDeclareArguments};
-use amqprs::connection::{Connection, OpenConnectionArguments};
 use config::{Config, ConfigError};
 use interfaces::{
     grpc::{word::word_service_server::WordServiceServer, GrpcInterface, GrpcInterfaceError},
@@ -28,7 +23,7 @@ use opentelemetry_resource_detectors::{
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 use opentelemetry_sdk::propagation::{BaggagePropagator, TraceContextPropagator};
-use opentelemetry_sdk::resource::SdkProvidedResourceDetector;
+use opentelemetry_sdk::resource::{EnvResourceDetector, SdkProvidedResourceDetector};
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use opentelemetry_sdk::Resource;
 use serde::{Deserialize, Serialize};
@@ -63,12 +58,6 @@ enum ExampleAppError {
     HttpServerError(#[source] HttpInterfaceError),
     #[error("gRPC server error")]
     GrpcServerError(#[source] GrpcInterfaceError),
-    #[error("AMQP interface error")]
-    AmqpInterfaceError(#[source] AmqpInterfaceError),
-    #[error("Error building AMQP channel")]
-    AmqpChannelError(#[source] amqprs::error::Error),
-    #[error("Failed to declare queue")]
-    AmqpQueueDeclareError,
     #[error("gRPC client error")]
     GrpcClientError(#[source] GrpcClientError),
     #[error("Error when building OpenTelemetry span exporter")]
@@ -85,15 +74,7 @@ enum ExampleAppError {
 struct ExampleAppConfig {
     http_port: u16,
     grpc_port: u16,
-    grpc_connected_services: String,
-    amqp_connected_services: String,
-    amqp_host: String,
-    amqp_port: u16,
-    amqp_username: String,
-    amqp_password: String,
-    amqp_queue_name: String,
-    amqp_routing_key: String,
-    amqp_exchange_name: String,
+    connected_services: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -108,23 +89,7 @@ fn init_config() -> Result<(ExampleAppConfig, MonitoringConfig), ExampleAppError
         .map_err(ExampleAppError::ConfigError)?
         .set_default("grpc_port", 50051)
         .map_err(ExampleAppError::ConfigError)?
-        .set_default("grpc_connected_services", "")
-        .map_err(ExampleAppError::ConfigError)?
-        .set_default("amqp_connected_services", "")
-        .map_err(ExampleAppError::ConfigError)?
-        .set_default("amqp_host", "localhost")
-        .map_err(ExampleAppError::ConfigError)?
-        .set_default("amqp_port", 5672)
-        .map_err(ExampleAppError::ConfigError)?
-        .set_default("amqp_username", "admin")
-        .map_err(ExampleAppError::ConfigError)?
-        .set_default("amqp_password", "admin")
-        .map_err(ExampleAppError::ConfigError)?
-        .set_default("amqp_queue_name", "example-service-1.chain")
-        .map_err(ExampleAppError::ConfigError)?
-        .set_default("amqp_routing_key", "example-service-1.chain")
-        .map_err(ExampleAppError::ConfigError)?
-        .set_default("amqp_exchange_name", "amq.topic")
+        .set_default("connected_services", "")
         .map_err(ExampleAppError::ConfigError)?
         .build()
         .map_err(ExampleAppError::ConfigError)?
@@ -283,17 +248,21 @@ async fn init_store() -> Result<impl Store, ExampleAppError> {
         .map_err(ExampleAppError::HashmapStoreError)?)
 }
 
-fn init_grpc_clients(
+fn init_core(
+    store: impl Store,
     config: &ExampleAppConfig,
-) -> (
-    Arc<RwLock<Vec<GrpcClient>>>,
-    impl Future<Output = Result<(), ExampleAppError>>,
-) {
+) -> Result<
+    (
+        Core<impl Store, impl Client>,
+        impl Future<Output = Result<(), ExampleAppError>>,
+    ),
+    ExampleAppError,
+> {
     info!("Building gRPC clients...");
     let grpc_clients = Arc::new(RwLock::new(Vec::new()));
     let grpc_clients_task = {
         let grpc_clients_clone = grpc_clients.clone();
-        let urls = config.grpc_connected_services.clone();
+        let urls = config.connected_services.clone();
         async move {
             if !urls.is_empty() {
                 for service_url in urls.split(',') {
@@ -308,128 +277,7 @@ fn init_grpc_clients(
         }
     };
 
-    (grpc_clients, grpc_clients_task)
-}
-
-async fn init_amqp_clients(
-    config: &ExampleAppConfig,
-    connection: Connection,
-) -> Result<Arc<RwLock<Vec<AmqpClient>>>, ExampleAppError> {
-    info!("Building AMQP clients...");
-    let amqp_clients = Arc::new(RwLock::new(Vec::new()));
-    if !config.amqp_connected_services.is_empty() {
-        for routing_key in config.amqp_connected_services.split(",") {
-            let channel = connection
-                .open_channel(None)
-                .await
-                .map_err(ExampleAppError::AmqpChannelError)?;
-
-            channel
-                .register_callback(amqprs::callbacks::DefaultChannelCallback)
-                .await
-                .map_err(ExampleAppError::AmqpChannelError)?;
-
-            let (queue_name, _, _) = channel
-                .queue_declare(QueueDeclareArguments::durable_client_named(
-                    &config.amqp_queue_name,
-                ))
-                .await
-                .map_err(ExampleAppError::AmqpChannelError)?
-                .ok_or(ExampleAppError::AmqpQueueDeclareError)?;
-
-            channel
-                .queue_bind(QueueBindArguments::new(
-                    &queue_name,
-                    &config.amqp_exchange_name,
-                    &config.amqp_routing_key,
-                ))
-                .await
-                .map_err(ExampleAppError::AmqpChannelError)?;
-
-            amqp_clients.write().await.push(AmqpClient::new(
-                channel,
-                config.amqp_exchange_name.clone(),
-                routing_key.to_string(),
-            ));
-        }
-    }
-
-    Ok(amqp_clients)
-}
-
-async fn init_amqp_main_channel(
-    config: &ExampleAppConfig,
-) -> Result<(Channel, Connection), ExampleAppError> {
-    info!("Building AMQP channel...");
-    let connection = Connection::open(&OpenConnectionArguments::new(
-        &config.amqp_host,
-        config.amqp_port,
-        &config.amqp_username,
-        &config.amqp_password,
-    ))
-    .await
-    .map_err(ExampleAppError::AmqpChannelError)?;
-    connection
-        .register_callback(DefaultConnectionCallback)
-        .await
-        .map_err(ExampleAppError::AmqpChannelError)?;
-
-    let channel = connection
-        .open_channel(None)
-        .await
-        .map_err(ExampleAppError::AmqpChannelError)?;
-
-    channel
-        .register_callback(amqprs::callbacks::DefaultChannelCallback)
-        .await
-        .map_err(ExampleAppError::AmqpChannelError)?;
-
-    let (queue_name, _, _) = channel
-        .queue_declare(QueueDeclareArguments::durable_client_named(
-            &config.amqp_queue_name,
-        ))
-        .await
-        .map_err(ExampleAppError::AmqpChannelError)?
-        .ok_or(ExampleAppError::AmqpQueueDeclareError)?;
-
-    channel
-        .queue_bind(QueueBindArguments::new(
-            &queue_name,
-            &config.amqp_exchange_name,
-            &config.amqp_routing_key,
-        ))
-        .await
-        .map_err(ExampleAppError::AmqpChannelError)?;
-
-    Ok((channel, connection))
-}
-
-async fn init_core(
-    store: impl Store,
-    config: &ExampleAppConfig,
-) -> Result<
-    (
-        Core<impl Store, impl Client>,
-        impl Future<Output = Result<(), ExampleAppError>>,
-        Channel,
-        Connection,
-        Arc<RwLock<Vec<AmqpClient>>>,
-    ),
-    ExampleAppError,
-> {
-    let (grpc_clients, grpc_clients_task) = init_grpc_clients(config);
-
-    let (amqp_channel, amqp_connection) = init_amqp_main_channel(config).await?;
-
-    let amqp_clients = init_amqp_clients(config, amqp_connection.clone()).await?;
-
-    Ok((
-        Core::new(store, grpc_clients.clone()),
-        grpc_clients_task,
-        amqp_channel,
-        amqp_connection,
-        amqp_clients,
-    ))
+    Ok((Core::new(store, grpc_clients), grpc_clients_task))
 }
 
 fn init_http_interface(
@@ -474,24 +322,6 @@ fn init_grpc_interface(
     })
 }
 
-async fn init_amqp_interface(
-    core: Core<impl Store, impl Client>,
-    config: &ExampleAppConfig,
-    channel: Channel,
-) -> Result<Channel, ExampleAppError> {
-    let amqp_interface = AmqpInterface::new(core);
-    info!(
-        "Registering consumer to RabbitMQ server on queue {0}...",
-        config.amqp_queue_name
-    );
-    amqp_interface
-        .register_consumer(channel.clone(), &config.amqp_queue_name)
-        .await
-        .map_err(ExampleAppError::AmqpInterfaceError)?;
-
-    Ok(channel)
-}
-
 #[tokio::main]
 async fn main() -> Result<(), ExampleAppError> {
     let (app_config, monitoring_config) = init_config()?;
@@ -502,14 +332,11 @@ async fn main() -> Result<(), ExampleAppError> {
 
     let store = init_store().await?;
 
-    let (core, client_task, amqp_channel, _amqp_connection_guard, _amqp_clients_guard) =
-        init_core(store, &app_config).await?;
+    let (core, client_task) = init_core(store, &app_config)?;
 
     let http_server_task = init_http_interface(core.clone(), &app_config);
 
-    let grpc_server_task = init_grpc_interface(core.clone(), &app_config)?;
-
-    let _amqp_channel_guard = init_amqp_interface(core.clone(), &app_config, amqp_channel).await?;
+    let grpc_server_task = init_grpc_interface(core, &app_config)?;
 
     tokio::try_join!(http_server_task, grpc_server_task, client_task)?;
 

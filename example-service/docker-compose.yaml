@@ -113,6 +113,7 @@ services:
       - 3100:3100
     volumes:
       - ./loki.yaml:/bitnami/grafana-loki/conf/loki.yaml:ro
+
   grafana:
     image: bitnami/grafana:12.0.2
     ports:
@@ -124,12 +125,3 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     volumes:
       - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasource.yaml:ro
-  rabbitmq:
-    image: bitnami/rabbitmq:4.1.2
-    ports:
-      - 5672:5672
-      - 15672:15672
-    environment:
-      - RABBITMQ_PASSWORD=admin
-      - RABBITMQ_USERNAME=admin
-      - RABBITMQ_MANAGEMENT_ALLOW_WEB_ACCESS=true
