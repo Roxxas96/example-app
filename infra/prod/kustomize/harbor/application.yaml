@@ -119,6 +119,10 @@ spec:
               nginx.ingress.kubernetes.io/whitelist-source-range: 10.244.0.0/16,192.168.0.0/24
             tls: true
 
+        postgresql:
+          primary:
+            resourcesPreset: micro
+
         metrics:
           enabled: true
           serviceMonitor:
