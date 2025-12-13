@@ -69,7 +69,29 @@ spec:
 
         exposureType: ingress
 
+        nginx:
+          image:
+            repository: bitnamilegacy/nginx
+
+        exporter:
+          image:
+            repository: bitnamilegacy/harbor-exporter
+
+        registry:
+          server:
+            image:
+              repository: bitnamilegacy/harbor-registry
+          controller:
+            image:
+              repository: bitnamilegacy/harbor-registryctl
+          updateStrategy:
+            type: Recreate
+
         jobservice:
+          image:
+            repository: bitnamilegacy/harbor-jobservice
+          updateStrategy:
+            type: Recreate
           resources:
             requests:
               cpu: "0.1"
@@ -79,6 +101,8 @@ spec:
               memory: 728Mi
 
         core:
+          image:
+            repository: bitnamilegacy/harbor-core
           resources:
             requests:
               cpu: "0.1"
@@ -88,6 +112,8 @@ spec:
               memory: 728Mi
 
         trivy:
+          image:
+            repository: bitnamilegacy/harbor-adapter-trivy
           resources:
             requests:
               cpu: "0.1"
@@ -97,6 +123,8 @@ spec:
               memory: 728Mi
 
         portal:
+          image:
+            repository: bitnamilegacy/harbor-portal
           resources:
             requests:
               cpu: "0.1"
@@ -127,11 +155,3 @@ spec:
           enabled: true
           serviceMonitor:
             enabled: true
-
-        registry:
-          updateStrategy:
-            type: Recreate
-
-        jobservice:
-          updateStrategy:
-            type: Recreate
